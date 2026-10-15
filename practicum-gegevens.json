@@ -1,0 +1,24 @@
+{
+  "schema": "dubbele-slinger/measurement-record/v1",
+  "recordedDate": "2026-10-15",
+  "status": "mass-interpretation-pending",
+  "description": "Door de gebruiker aangeleverde gegevens; dit is geen importeerbaar simulatie-proefbestand.",
+  "lengths": {
+    "s1": { "value": 0.203, "unit": "m", "definition": "Oorsprong naar tweede scharnier", "reportedUncertainty": null },
+    "s2": { "value": 0.157, "unit": "m", "definition": "Tweede scharnier naar uiteinde", "reportedUncertainty": null }
+  },
+  "masses": {
+    "upper": { "value": 0.2703, "unit": "kg", "reportedPlusMinus": 0.001, "sourceLabel": "Upper Mass, m1", "modelParameter": null },
+    "lower": { "value": 0.2000, "unit": "kg", "reportedPlusMinus": 0.001, "sourceLabel": "Lower Mass, m2", "modelParameter": null }
+  },
+  "uncertaintyNote": "De betekenis of het betrouwbaarheidsniveau van de opgegeven plus/min-marge is niet vermeld. Geen onzekerheid voor lengtes aangeleverd.",
+  "pending": [
+    "Zijn de tabelmassa's totale bewegende stangmassa's of extra losse gewichten?",
+    "Massaverdeling en traagheidsmoment nog niet gemeten; uniforme slanke stangen blijven een modelaanname.",
+    "Beginhoeken, beginsnelheden en demping nog niet uit de video bepaald."
+  ],
+  "sources": [
+    "WhatsApp Image 2026-10-15 at 9.53.12 PM.jpeg",
+    "WhatsApp Image 2026-10-15 at 9.53.04 PM.jpeg"
+  ]
+}

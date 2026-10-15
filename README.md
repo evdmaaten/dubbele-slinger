@@ -11,7 +11,24 @@ Interactief model van een dubbele slinger, gebaseerd op de aangeleverde schets. 
 
 Een flexibele draad valt hier onder de touwmodus; buigstijfheid wordt niet gemodelleerd. Slap touw, vrije vlucht en de schok bij opnieuw strak trekken zijn nog niet geïmplementeerd. Een touwstart die een duwkracht vereist wordt meteen afgewezen. Stangen worden als perfect stijf beschouwd; botsingen, knikken en een mechanische rotatiestop zijn niet inbegrepen.
 
-De lokaal bekeken praktijkvideo toont twee stijve, vlakke strips met draaipunten en gele markeringen bij tussenpunt en eindpunt. Daarom past de **stangmodus** bij het zichtbare mechanisme. De bovenste strip lijkt langer; de beweging dempt zichtbaar uit gedurende de opname van ongeveer 83 s. Dit zijn beeldobservaties, geen gekalibreerde afmetingen of massa's. Uniforme slanke stangen blijven een benadering van deze strips. De voorbeeldinstellingen zijn nog niet op de video afgestemd; de echte draaipuntsafstanden, stangmassa's en eventuele extra massa van markeringen en bevestigingen moeten worden gemeten. De video is niet naar de repository geüpload en er is nog geen gemeten hoekreeks geïmporteerd.
+De lokaal bekeken praktijkvideo toont twee stijve, vlakke strips met draaipunten en gele markeringen bij tussenpunt en eindpunt. Daarom past de **stangmodus** bij het zichtbare mechanisme. De bovenste strip lijkt langer; de beweging dempt zichtbaar uit gedurende de opname van ongeveer 83 s. Dit zijn beeldobservaties. Uniforme slanke stangen blijven een benadering van deze strips. De voorbeeldinstellingen zijn nog niet op de video afgestemd. De video is niet naar de repository geüpload en er is nog geen gemeten hoekreeks geïmporteerd.
+
+### Aangeleverde practicumgegevens
+
+Op 15 oktober 2026 zijn deze waarden in twee afbeeldingen aangeleverd:
+
+| Grootheid | Aangeleverde waarde | In SI-eenheden |
+| --- | --- | --- |
+| Oorsprong naar tweede scharnier, s1 | 203 mm | 0,203 m |
+| Tweede scharnier naar uiteinde, s2 | 157 mm | 0,157 m |
+| Upper Mass, m1 in de brontabel | 0,2703 ± 0,001 kg | 0,2703 ± 0,001 kg |
+| Lower Mass, m2 in de brontabel | 0,2000 ± 0,001 kg | 0,2000 ± 0,001 kg |
+
+De gebruiker heeft aangegeven dat de betekenis van de massa's **nog onbekend** is. De labels `m1` en `m2` in de brontabel betekenen niet automatisch de extra puntmassa's `m1` en `m2` in deze app: als het de totale stangmassa's zijn, horen ze bij `rodMass1` en `rodMass2`. Tel dezelfde massa niet dubbel. De betekenis van de opgegeven ±0,001 kg en de onzekerheid in de lengtes zijn niet gespecificeerd. De letterlijke gegevens en de open punten staan in [practicum-gegevens.json](practicum-gegevens.json); dat is een meetrecord, geen importeerbaar proefbestand. De gemeten massa's zijn daarin bewust nog aan geen modelparameter toegewezen. Beginstand, demping en massaverdeling blijven nog te bepalen.
+
+De keuzelijst bevat **Practicum · alleen lengtes**. Deze voorinstelling gebruikt de aangeleverde `s1 = 0,203 m` en `s2 = 0,157 m` in stangmodus. Alle overige waarden zijn voorbeelden: `rodMass1 = rodMass2 = 0,2 kg`, `m1 = m2 = 0`, beginhoeken `25° / −15°`, nulbeginsnelheden, `c1 = 0,002` en `c2 = 0,001 N·m·s/rad`. De gemeten `0,2703 kg` en `0,2000 kg` worden niet automatisch ingevuld; dat de voorbeeldmassa van de onderste stang eveneens `0,2 kg` is, betekent geen bevestigde toewijzing.
+
+Deze voorinstelling maakt de aangeleverde lengtes bruikbaar zonder de onbekende massa-interpretatie in te vullen. Het blijft een **ongekalibreerde voorbeeldproef**. De interface blijft bij openen starten met het bestaande stangenvoorbeeld van `0,5 m` per stang; kies de practicumvoorinstelling afzonderlijk.
 
 ## Lokaal starten
 

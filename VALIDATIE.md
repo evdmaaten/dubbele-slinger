@@ -165,3 +165,10 @@ Meet eerst de draaipuntsafstanden, massa en massaverdeling van elke strip, event
 Bij grote uitslagen moeten vooral vlakke beweging, scharnierwrijving, botsingen, werkelijke massaverdeling en rotatie van extra gewichten worden gecontroleerd. Voor een aparte touwopstelling is blijvende touwspanning vereist: als een touw slap wordt, eindigt die modelvariant en wordt de vervolgbeweging niet voorspeld. Er is geen universele RMSE-grens gekozen die een echte proef automatisch goedkeurt.
 
 Volg het [meetprotocol in README.md](README.md). Een vergelijking met een opnieuw ingelezen simulatie-CSV controleert alleen de softwaregegevensroute en telt niet als onafhankelijke experimentele validatie.
+
+
+## Aanvulling: aangeleverde practicumlengtes (15 oktober 2026)
+
+De keuze **Practicum · alleen lengtes** is in Chrome met het opnieuw gebouwde `standalone.html` gecontroleerd. De interface toont `s1=0.203` en `s2=0.157`; de stangmassa’s blijven expliciete voorbeeldwaarden van elk `0.2 kg`, met nul extra puntgewichten. De tabelmassa’s `0.2703` en `0.2000 kg` zijn niet toegewezen: de gebruiker heeft bevestigd dat hun betekenis nog onbekend is. Het meetrecord bewaart daarvoor `modelParameter: null`.
+
+De voorbeeldberekening van 20 s wordt afgerond zonder browserfouten; de vergelijking met halve tijdstap toont ongeveer `9.8e-12 m`. De toelichting over nog onbekende massatoewijzing is zichtbaar naast de instellingen. Dit controleert de gegevensinvoer en interface; de rekenkern is niet gewijzigd en er is geen nieuwe fysieke validatie uitgevoerd.
