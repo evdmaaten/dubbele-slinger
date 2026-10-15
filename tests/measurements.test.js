@@ -101,3 +101,48 @@ test('simulation export has explicit SI/degree units and round-trips angles', ()
   assert.equal(values[10], 3.2);
   assert.throws(() => exportSimulationCSV([{ ...samples[0], energy: NaN }]));
 });
+
+test('rigid export labels signed axial and Cartesian reactions and round-trips angles', () => {
+  const samples = [0, 0.02].map((t) => ({
+    t, theta1: rad(200 + t), theta2: rad(-190 - t), omega1: rad(120), omega2: rad(-45),
+    x1: -0.25, y1: 0.4, x2: 0.5, y2: 0.4, energy: 2.5,
+    tension1: -3.2, tension2: -1.8, dissipated: 0.04,
+    reaction1X: -1.1, reaction1Y: 4.3, reaction2X: 2.2, reaction2Y: -0.7,
+  }));
+  const csv = exportSimulationCSV({ params: { model: 'rigid', rodMass1: 0.2, rodMass2: 0.1 }, samples });
+  const lines = csv.trim().split('\n');
+  const headers = lines[0].split(',');
+  assert.equal(lines[0], 't,theta1_deg,theta2_deg,omega1_deg_s,omega2_deg_s,x1_m,y1_m,x2_m,y2_m,energy_J,axial_reaction1_N,axial_reaction2_N,reaction1_x_N,reaction1_y_N,reaction2_x_N,reaction2_y_N,dissipated_J');
+  assert.ok(!headers.includes('tension1_N') && !headers.includes('tension2_N'));
+  const exported = Object.fromEntries(lines[1].split(',').map((value, i) => [headers[i], Number(value)]));
+  assert.equal(exported.axial_reaction1_N, -3.2);
+  assert.equal(exported.axial_reaction2_N, -1.8);
+  assert.equal(exported.reaction1_x_N, -1.1);
+  assert.equal(exported.reaction1_y_N, 4.3);
+  assert.equal(exported.reaction2_x_N, 2.2);
+  assert.equal(exported.reaction2_y_N, -0.7);
+  assert.equal(exported.dissipated_J, 0.04);
+  const parsed = parseMeasurementCSV(csv);
+  assert.equal(parsed.length, samples.length);
+  parsed.forEach((row, i) => {
+    close(row.theta1, samples[i].theta1);
+    close(row.theta2, samples[i].theta2);
+    assert.equal(row.t, samples[i].t);
+  });
+  close(compareMeasurements(parsed, samples).rmse1Deg, 0);
+  close(compareMeasurements(parsed, samples).rmse2Deg, 0);
+});
+
+test('rigid export rejects missing or non-finite reaction components', () => {
+  const sample = {
+    t: 0, theta1: 0, theta2: 0, omega1: 0, omega2: 0,
+    x1: 0, y1: -0.5, x2: 0, y2: -1, energy: 0,
+    tension1: 3.2, tension2: 1.8, dissipated: 0,
+    reaction1X: 0, reaction1Y: 3.2, reaction2X: 0, reaction2Y: 1.8,
+  };
+  for (const invalid of [undefined, NaN, Infinity]) {
+    assert.throws(() => exportSimulationCSV({
+      params: { model: 'rigid' }, samples: [{ ...sample, reaction2Y: invalid }],
+    }), /reaction2Y/);
+  }
+});

@@ -191,3 +191,143 @@ test('invalid input produces explicit diagnostics without throwing or running', 
     assert.equal(result.samples.length, 0);
   }
 });
+
+test('string mode ignores rod masses and preserves the original trajectory and slack stop', () => {
+  const p = { theta1: 80, theta2: 20, duration: 2 };
+  const original = simulate(p);
+  const ignored = simulate({ ...p, model: 'string', rodMass1: 5, rodMass2: 9 });
+  assert.equal(ignored.status, 'slack');
+  assert.deepEqual(ignored.samples, original.samples);
+  assert.deepEqual(ignored.event, original.event);
+  assert.equal(ignored.diagnostics.forceSemantics, 'string-tension');
+});
+
+test('massless rigid rods reproduce the ideal taut double pendulum with and without damping', () => {
+  for (const damping of [0, 0.003]) {
+    const p = { c1: damping, c2: damping * 2, duration: 3 };
+    const strings = simulate(p), rods = simulate({ ...p, model: 'rigid' });
+    assert.equal(strings.status, 'complete');
+    assert.equal(rods.status, 'complete');
+    assert.equal(strings.samples.length, rods.samples.length);
+    strings.samples.forEach((s, i) => {
+      const r = rods.samples[i];
+      near(s.theta1, r.theta1, 1e-11); near(s.theta2, r.theta2, 1e-11);
+      near(s.energy, r.energy, 1e-11);
+      near(s.tension1, r.tension1, 1e-10); near(s.tension2, r.tension2, 1e-10);
+    });
+  }
+});
+
+test('uniform rods at rest have reaction forces equal to their supported weights', () => {
+  const p = { ...DEFAULTS, model: 'rigid', m1: 0.3, m2: 0.7, rodMass1: 0.15, rodMass2: 0.25 };
+  const r = tensions([0, 0, 0, 0, 0], p);
+  near(r.reaction1X, 0); near(r.reaction2X, 0);
+  near(r.reaction1Y, (p.m1 + p.m2 + p.rodMass1 + p.rodMass2) * p.g);
+  near(r.reaction2Y, (p.m2 + p.rodMass2) * p.g);
+  near(r.tension1, r.reaction1Y); near(r.tension2, r.reaction2Y);
+});
+
+test('massive-rod reactions satisfy independent COM force and torque balances with pure damping couples', () => {
+  const cross = (x, y, fx, fy) => x * fy - y * fx;
+  for (const c of [0, 0.007]) {
+    const p = { ...DEFAULTS, model: 'rigid', s1: 0.63, s2: 0.38,
+      m1: 0.19, m2: 0.27, rodMass1: 0.15, rodMass2: 0.23, c1: c, c2: c * 1.3 };
+    const state = [0.73, -0.37, 1.8, -2.3, 0];
+    const [a, b, u, v] = state;
+    const [, , aa, ab] = derivative(state, p);
+    const R = tensions(state, p);
+    const M1 = p.m1 + p.rodMass1, M2 = p.m2 + p.rodMass2;
+    const h1 = p.s1 * (p.m1 + p.rodMass1 / 2) / M1;
+    const h2 = p.s2 * (p.m2 + p.rodMass2 / 2) / M2;
+    const I1 = p.rodMass1 * p.s1 ** 2 / 12 + p.rodMass1 * (p.s1 / 2 - h1) ** 2 + p.m1 * (p.s1 - h1) ** 2;
+    const I2 = p.rodMass2 * p.s2 ** 2 / 12 + p.rodMass2 * (p.s2 / 2 - h2) ** 2 + p.m2 * (p.s2 - h2) ** 2;
+    const ax1 = h1 * (aa * Math.cos(a) - u * u * Math.sin(a));
+    const ay1 = h1 * (aa * Math.sin(a) + u * u * Math.cos(a));
+    const jointAX = p.s1 * (aa * Math.cos(a) - u * u * Math.sin(a));
+    const jointAY = p.s1 * (aa * Math.sin(a) + u * u * Math.cos(a));
+    const ax2 = jointAX + h2 * (ab * Math.cos(b) - v * v * Math.sin(b));
+    const ay2 = jointAY + h2 * (ab * Math.sin(b) + v * v * Math.cos(b));
+    near(M1 * ax1, R.reaction1X - R.reaction2X);
+    near(M1 * ay1, R.reaction1Y - R.reaction2Y - M1 * p.g);
+    near(M2 * ax2, R.reaction2X);
+    near(M2 * ay2, R.reaction2Y - M2 * p.g);
+    const q1 = -p.c1 * u + p.c2 * (v - u), q2 = -p.c2 * (v - u);
+    const torque1 = cross(-h1 * Math.sin(a), h1 * Math.cos(a), R.reaction1X, R.reaction1Y)
+      + cross((p.s1 - h1) * Math.sin(a), -(p.s1 - h1) * Math.cos(a), -R.reaction2X, -R.reaction2Y) + q1;
+    const torque2 = cross(-h2 * Math.sin(b), h2 * Math.cos(b), R.reaction2X, R.reaction2Y) + q2;
+    near(I1 * aa, torque1); near(I2 * ab, torque2);
+  }
+});
+
+test('two equal uniform rods without point weights have the analytical small-angle normal frequencies', () => {
+  // Direct determinant of [[3/2,0],[0,1/2]]-lambda*[[4/3,1/2],[1/2,1/3]]:
+  // 7 lambda² - 42 lambda + 27 = 0, lambda=omega² L/g.
+  for (const sign of [-1, 1]) {
+    const lambda = 3 + sign * 6 / Math.sqrt(7);
+    const theta1 = 0.005, theta2 = theta1 * (3 / lambda - 8 / 3);
+    const period = 2 * Math.PI / Math.sqrt(DEFAULTS.g / DEFAULTS.s1 * lambda);
+    const r = simulate({ model: 'rigid', m1: 0, m2: 0, rodMass1: 0.2, rodMass2: 0.2, theta1, theta2, duration: period });
+    assert.equal(r.status, 'complete');
+    near(r.samples.at(-1).theta1, theta1 * rad, 2e-10);
+    near(r.samples.at(-1).theta2, theta2 * rad, 2e-10);
+    const quarter = r.samples.reduce((a, b) => Math.abs(a.t - period / 4) < Math.abs(b.t - period / 4) ? a : b);
+    assert.ok(Math.abs(quarter.theta1) < theta1 * rad * 0.07);
+  }
+});
+
+test('vanishing lower-rod mass approaches the exact single uniform physical-pendulum equation', () => {
+  const p = { ...DEFAULTS, model: 'rigid', m1: 0, m2: 0, rodMass1: 0.3, rodMass2: 1e-10, s1: 0.6, s2: 0.4 };
+  assert.equal(validateParams(p).ok, true);
+  const a = 0.6;
+  const d = derivative([a, 0.2, 0, 0, 0], p);
+  near(d[2], -3 * p.g / (2 * p.s1) * Math.sin(a), 1e-7);
+});
+
+test('rigid rods continue through compression and complete multiple rotations', () => {
+  const r = simulate({ model: 'rigid', rodMass1: 0.05, rodMass2: 0.05,
+    theta1: 120, theta2: -10, omega1: 720, duration: 3 });
+  assert.equal(r.status, 'complete');
+  assert.equal(r.event, null);
+  assert.equal(r.diagnostics.forceSemantics, 'axial-support-and-joint-reaction');
+  assert.ok(r.diagnostics.minTension1 < 0);
+  assert.ok(Math.max(...r.samples.map(s => Math.abs(s.theta1))) > 2 * Math.PI);
+  assert.ok(r.diagnostics.relativeEnergyError < 1e-7);
+  for (const s of r.samples) {
+    near(Math.hypot(s.x1, s.y1), r.params.s1, 1e-14);
+    near(Math.hypot(s.x2 - s.x1, s.y2 - s.y1), r.params.s2, 1e-14);
+  }
+});
+
+test('massive rods dissipate mechanical energy while preserving E+D', () => {
+  const r = simulate({ model: 'rigid', m1: 0, m2: 0, rodMass1: 0.2, rodMass2: 0.2,
+    c1: 0.002, c2: 0.002, duration: 10 });
+  assert.equal(r.status, 'complete');
+  assert.ok(r.diagnostics.relativeEnergyError < 1e-9);
+  assert.ok(r.diagnostics.finalEnergy < r.diagnostics.initialEnergy / 2);
+  assert.ok(r.diagnostics.dissipatedEnergy > 0);
+  for (let i = 1; i < r.samples.length; i++) {
+    assert.ok(r.samples[i].energy <= r.samples[i - 1].energy + 1e-10);
+    assert.ok(r.samples[i].dissipated >= r.samples[i - 1].dissipated);
+  }
+});
+
+test('rigid validation accepts independent rod inertias and rejects singular or unphysical configurations', () => {
+  for (const p of [
+    { model: 'rigid', m1: 0, m2: 0, rodMass1: 0.1, rodMass2: 0.1 },
+    { model: 'rigid', m1: 0, m2: 0, rodMass1: 0, rodMass2: 0.1 },
+    { model: 'rigid', m1: 0, m2: 0.2, rodMass1: 0.1, rodMass2: 0 },
+  ]) assert.equal(validateParams(p).ok, true);
+  for (const p of [
+    { model: 'rigid', m1: 0, m2: 0 },
+    { model: 'rigid', m1: 0, m2: 0.2 },
+    { model: 'rigid', m1: 0, m2: 0, rodMass1: 0.1 },
+    { model: 'rigid', m1: -0.1 }, { rodMass1: -0.1 },
+    { model: 'unsupported' }, { model: 1 }, { model: 'string', m1: 0 },
+  ]) {
+    assert.equal(validateParams(p).ok, false);
+    const r = simulate(p);
+    assert.equal(r.status, 'error');
+    assert.equal(r.samples.length, 0);
+    assert.ok(r.diagnostics.errors.length);
+  }
+});
