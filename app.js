@@ -5,13 +5,15 @@ const $ = id => document.getElementById(id);
 const DEG = 180 / Math.PI;
 const fmt = (n,d=2) => Number.isFinite(n) ? n.toLocaleString('nl-NL',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—';
 const scientific = n => Number.isFinite(n) ? n.toExponential(1).replace('.',',') : '—';
-const parameterNames = ['s1','s2','m1','m2','g','c1','c2','theta1','theta2','omega1','omega2','duration','dt','perturbation'];
+const parameterNames = ['s1','s2','m1','m2','rodMass1','rodMass2','g','c1','c2','theta1','theta2','omega1','omega2','duration','dt','perturbation'];
+const presets={rods:{model:'rigid',m1:0,m2:0,rodMass1:.2,rodMass2:.2,c1:.002,c2:.001},rotation:{model:'rigid',rodMass1:.05,rodMass2:.05,theta1:120,theta2:-10,duration:10},default:{theta1:25,theta2:-15},small:{theta1:5,theta2:0},large:{theta1:60,theta2:25},slack:{theta1:80,theta2:20}};
 let primary=null,twin=null,convergence=null,measurements=[],comparison=null,currentTime=0,playing=false,lastFrame=0,worker=null,job=0,busy=false,dirty=false;
 let separation=[], viewBounds=null;
 const colors={one:'#008c94',two:'#d26948',ghost:'#889b7f',grid:'#e4e8df',ink:'#74847f'};
 
-function getParams(){return Object.fromEntries(parameterNames.map(key=>[key,Number($(key).value)]));}
-function setParams(p){for(const key of parameterNames) if(key in p) $(key).value=p[key];}
+function getParams(){return {...Object.fromEntries(parameterNames.map(key=>[key,Number($(key).value)])),model:$('model').value};}
+function updateModelFields(){const rigid=$('model').value==='rigid';$('rod-fields').hidden=!rigid;for(const key of ['rodMass1','rodMass2'])$(key).disabled=!rigid;for(const key of ['m1','m2'])$(key).min=rigid?'0':'0.01';$('model-hint').textContent=rigid?'Stangen kunnen trekken en duwen. Hun verdeelde massa telt mee.':'Touw kan alleen trekken. De berekening stopt bij verlies van spanning.';$('mass-hint').textContent=rigid?'Stangen: uniforme slanke staven. Geen extra gewichten? Zet m₁ en m₂ op 0.':'Touw/draad: massaloos en onrekbaar. Beide gewichten moeten een positieve massa hebben.';}
+function setParams(p){for(const key of [...parameterNames,'model']) if(key in p) $(key).value=p[key];updateModelFields();}
 function setPlay(value){playing=value;$('play').textContent=value?'Ⅱ':'▶';$('play').setAttribute('aria-label',value?'Pauzeren':'Afspelen');lastFrame=0;}
 function sampleAt(samples,t){
   if(!samples?.length || t<samples[0].t-1e-8 || t>samples.at(-1).t+1e-8)return null;
@@ -31,7 +33,7 @@ function acceptResult(result){
   if(result.primary.status==='error')return failure(result.primary.diagnostics.errors.join(' '));
   primary=result.primary;twin=result.twin;
   const {coarse, fine, ...compactConvergence}=result.convergence;convergence=compactConvergence;
-  busy=false;dirty=parameterNames.some(key=>Number($(key).value)!==primary.params[key]);currentTime=0;setPlay(false);
+  busy=false;dirty=parameterNames.some(key=>Number($(key).value)!==primary.params[key])||$('model').value!==primary.params.model;currentTime=0;setPlay(false);
   $('calculate').disabled=false;$('form-state').textContent=dirty?'Instellingen gewijzigd tijdens berekenen. Klik opnieuw op Bereken proef.':'Proef berekend. Druk op ▶ om af te spelen.';
   $('timeline').max=primary.samples.at(-1).t;$('timeline').value=0;
   $('energy-metric').textContent=scientific(primary.diagnostics.relativeEnergyError*100)+' %';
@@ -43,11 +45,15 @@ function acceptResult(result){
   const length=primary.params.s1+primary.params.s2;
   viewBounds={minX:-length*.55,maxX:length*.55,minY:-length*.15,maxY:0};
   for(const s of [...primary.samples,...twin.samples])for(const n of [1,2]){viewBounds.minX=Math.min(viewBounds.minX,s['x'+n]);viewBounds.maxX=Math.max(viewBounds.maxX,s['x'+n]);viewBounds.minY=Math.min(viewBounds.minY,s['y'+n]);viewBounds.maxY=Math.max(viewBounds.maxY,s['y'+n]);}
-  const msg=$('model-message');
+  const msg=$('model-message'),rigid=primary.params.model==='rigid';
+  $('force-title').textContent=rigid?'Axiale scharnierkrachten':'Trekkracht in de touwen';$('force-unit').textContent=rigid?'F · N':'T · N';$('force-one').textContent=rigid?'— F₁':'— T₁';$('force-two').textContent=rigid?'— F₂':'— T₂';$('force-description').textContent=rigid?'· Projectie aan boveneinde van elke stang; negatief is toegestaan.':'· Bij 0 N bereikt het model zijn grens.';
+  $('tension-chart').setAttribute('aria-label',rigid?'Axiale projecties van de ophang- en scharnierreactie in newton':'Touwspanningen in newton');
   if(primary.status==='slack'){
     msg.className='notice warning';
     msg.textContent=`Modelgrens: touw ${primary.event.string} ${primary.event.t<1e-8?'kan bij deze beginstand niet gespannen blijven':'verliest spanning bij t = '+fmt(primary.event.t,4)+' s'}. De voorspelling stopt hier; vrije val en opnieuw strak trekken zijn niet gemodelleerd.`;
     $('run-badge').textContent='TOUW WORDT SLAP';$('run-badge').className='badge slack';
+  }else if(rigid){
+    msg.className='notice';msg.textContent=`Stangenmodel: ${fmt(primary.params.duration,1)} s berekend, inclusief verdeelde stangmassa en rotatietraagheid. Negatieve axiale reacties en volledige omwentelingen zijn toegestaan. De instellingen zijn nog niet geijkt op de practicumopstelling.`;$('run-badge').textContent='STANGEN · GEREED';$('run-badge').className='badge';
   }else{
     msg.className='notice';msg.textContent=`Beide touwen blijven gespannen gedurende ${fmt(primary.params.duration,1)} s. Kleinste berekende spanning: T₁ = ${fmt(primary.diagnostics.minTension1,3)} N, T₂ = ${fmt(primary.diagnostics.minTension2,3)} N. Dit is een modelvoorspelling, nog geen meting.`;
     $('run-badge').textContent='PROEF GEREED';$('run-badge').className='badge';
@@ -55,13 +61,14 @@ function acceptResult(result){
   if(twin.status==='slack')msg.textContent+=` De vergelijkingsproef stopt bij ${fmt(twin.event.t,4)} s.`;
   if(twin.status==='error')msg.textContent+=' De vergelijkingsproef kon niet worden berekend: '+twin.diagnostics.errors.join(' ');
   if(primary.diagnostics.relativeEnergyError>1e-5 || convergence.valid===false){msg.classList.add('warning');msg.textContent+=' Let op: controleer de numerieke nauwkeurigheid; gebruik een kleinere tijdstap.';}
+  if(convergence.maxPositionDifference>length*.01){msg.classList.add('warning');msg.textContent+=' De twee tijdstappen geven meer dan 1% van de totale lengte verschil. De lange baan is daardoor numeriek onzeker; verkort de proef en/of verklein Δt. Een goede energiebalans garandeert geen nauwkeurige baan.';}
   if(primary.diagnostics.warnings?.length)msg.textContent+=' '+primary.diagnostics.warnings.join(' ');
   updateComparison();drawAll();
 }
 async function calculate(){
   if(!$('settings-form').reportValidity())return;
   const params=getParams();
-  if(Object.values(params).some(v=>!Number.isFinite(v)))return failure('Vul voor iedere instelling een eindig getal in.');
+  if(parameterNames.some(key=>!Number.isFinite(params[key])))return failure('Vul voor iedere instelling een eindig getal in.');
   busy=true;setPlay(false);$('calculate').disabled=true;$('form-state').textContent='Berekenen, inclusief controle met halve tijdstap…';$('run-badge').textContent='BEREKENEN…';
   const id=++job;
   if(worker){worker.terminate();worker=null;}
@@ -89,13 +96,13 @@ function drawScene(){
   ctx.lineWidth=1.3;ctx.strokeStyle='#b57c5670';ctx.beginPath();trajectory.forEach((s,i)=>{const v=point(s.x2,s.y2);i?ctx.lineTo(...v):ctx.moveTo(...v);});ctx.stroke();
   const drawPendulum=(s,ghost=false)=>{
     const p1=point(s.x1,s.y1),p2=point(s.x2,s.y2);
-    ctx.lineWidth=ghost?1.5:2.2;ctx.strokeStyle=ghost?'#a4b9a080':'#b9d5cf';ctx.setLineDash(ghost?[5,5]:[]);ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(...p1);ctx.lineTo(...p2);ctx.stroke();ctx.setLineDash([]);
+    ctx.lineWidth=ghost?1.5:p.model==='rigid'?9:2.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=ghost?'#a4b9a080':'#b9d5cf';ctx.setLineDash(ghost?[5,5]:[]);ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(...p1);ctx.lineTo(...p2);ctx.stroke();ctx.setLineDash([]);ctx.lineCap='butt';ctx.lineJoin='miter';
     [[p1,'#59d3d0','m₁',p.m1],[p2,'#f2a078','m₂',p.m2]].forEach(([pos,color,label,mass])=>{const radius=ghost?7:Math.max(7,Math.min(17,8+Math.log10(mass*5+1)*7));ctx.beginPath();ctx.arc(...pos,radius,0,Math.PI*2);ctx.fillStyle=ghost?'#a4b9a050':color;ctx.fill();if(!ghost){ctx.strokeStyle='#0d2630';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#d2e3de';ctx.font='11px Segoe UI';ctx.fillText(label,pos[0]+radius+8,pos[1]+3);}});
-    if(!ghost){ctx.fillStyle='#7aa8ac';ctx.font='10px Segoe UI';ctx.fillText('s₁',(ox+p1[0])/2-20,(oy+p1[1])/2);ctx.fillText('s₂',(p1[0]+p2[0])/2+10,(p1[1]+p2[1])/2);}
+    if(!ghost){ctx.fillStyle='#9fc3c5';ctx.font='11px Segoe UI';ctx.fillText(p.model==='rigid'?'s₁ · '+fmt(p.rodMass1,3)+' kg':'s₁',(ox+p1[0])/2+12,(oy+p1[1])/2);ctx.fillText(p.model==='rigid'?'s₂ · '+fmt(p.rodMass2,3)+' kg':'s₂',(p1[0]+p2[0])/2+12,(p1[1]+p2[1])/2);}
   };
   const b=twin?sampleAt(twin.samples,currentTime):null;if(b&&$('show-twin').checked)drawPendulum(b,true);drawPendulum(a);
   ctx.fillStyle='#d5e2d8';ctx.beginPath();ctx.arc(ox,oy,4,0,2*Math.PI);ctx.fill();
-  $('scale-label').textContent=`raster ${fmt(grid,3)} m · gewichten schematisch`;
+  $('scale-label').textContent=`raster ${fmt(grid,3)} m · ${p.model==='rigid'?'stangdikte en eindpunten schematisch':'gewichten schematisch'}`;
   $('twin-metric').textContent=b?fmt(Math.hypot(a.x2-b.x2,a.y2-b.y2),4)+' m':'buiten model';
   $('time-readout').innerHTML=fmt(currentTime,2)+' <small>s</small>';
 }
@@ -144,7 +151,8 @@ function exportReady(){if(!primary||busy){$('export-status').textContent='Bereke
 
 $('settings-form').addEventListener('submit',e=>{e.preventDefault();calculate();});
 $('settings-form').addEventListener('input',()=>{dirty=true;setPlay(false);$('form-state').textContent='Instellingen gewijzigd. De grafieken tonen nog de vorige proef; klik op Bereken proef.';});
-$('preset').addEventListener('change',()=>{const presets={default:{theta1:25,theta2:-15},small:{theta1:5,theta2:0},large:{theta1:60,theta2:25},slack:{theta1:80,theta2:20}};setParams({...DEFAULTS,...presets[$('preset').value]});calculate();});
+$('model').addEventListener('change',()=>{updateModelFields();dirty=true;setPlay(false);$('form-state').textContent='Verbinding gewijzigd. Controleer de massa’s en klik op Bereken proef.';});
+$('preset').addEventListener('change',()=>{setParams({...DEFAULTS,...presets[$('preset').value]});calculate();});
 $('play').addEventListener('click',()=>{if(!primary||busy)return;if(currentTime>=primary.samples.at(-1).t)currentTime=0;if(primary.samples.at(-1).t===0)return;setPlay(!playing);drawAll();});
 $('reset').addEventListener('click',()=>{setPlay(false);currentTime=0;$('timeline').value=0;drawAll();});
 $('timeline').addEventListener('input',()=>{setPlay(false);currentTime=Number($('timeline').value);drawAll();});
@@ -154,8 +162,26 @@ $('measurement-file').addEventListener('change',async e=>{const file=e.target.fi
 $('clear-measurements').addEventListener('click',()=>{measurements=[];$('measurement-file-label').textContent='Selecteer een lokaal bestand';updateComparison();});
 $('csv-example').addEventListener('click',()=>download('voorbeeld-geen-echte-meting.csv','# Kunstmatige voorbeeldwaarden, GEEN echte metingen. Vervang met eigen videometingen.\nt,theta1_deg,theta2_deg\n0,25,-15\n0.1,22,-9\n0.2,16,3\n','text/csv;charset=utf-8'));
 $('export-csv').addEventListener('click',()=>{if(exportReady()){download('dubbele-slinger-simulatie.csv',exportSimulationCSV(primary),'text/csv;charset=utf-8');$('export-status').textContent='Simulatie geëxporteerd; bewaar ook de JSON voor instellingen en modelgrens.';}});
-$('export-json').addEventListener('click',()=>{if(exportReady()){download('dubbele-slinger-proef.json',JSON.stringify({schema:'dubbele-slinger/v1',createdAt:new Date().toISOString(),model:'twee massaloze onrekbare touwen, puntmassa’s, stopt bij slapte',angleConvention:'absolute hoeken vanaf omlaag; positief rechts',units:{parametersAngles:'deg',parametersOmega:'deg/s',length:'m',mass:'kg',time:'s',damping:'N m s/rad',x:'rechts',y:'omhoog'},params:primary.params,status:primary.status,event:primary.event,diagnostics:primary.diagnostics,convergence,twin:{params:twin.params,status:twin.status,event:twin.event},measurementComparison:comparison?{count:comparison.count,rmse1Deg:comparison.rmse1Deg,rmse2Deg:comparison.rmse2Deg,excluded:comparison.excluded,timeOffset:Number($('time-offset').value),maxTime:Number($('compare-until').value)}:null},null,2),'application/json');$('export-status').textContent='Instellingen, modelgrens en numerieke controles bewaard.';}});
-$('import-json').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>2e6)throw new Error('Maximaal 2 MB per proefbestand.');const data=JSON.parse(await file.text());if(data.schema!=='dubbele-slinger/v1'||!data.params)throw new Error('Geen ondersteund dubbele-slinger-proefbestand.');const p=Object.fromEntries(parameterNames.map(key=>{if(typeof data.params[key]!=='number'||!Number.isFinite(data.params[key]))throw new Error('Ongeldige instelling: '+key);return[key,data.params[key]];}));for(const key of parameterNames){const input=$(key);if(input.tagName==='SELECT'&&![...input.options].some(o=>Number(o.value)===p[key]))throw new Error('Niet-ondersteunde tijdstap.');if(input.min&&p[key]<Number(input.min)||input.max&&p[key]>Number(input.max))throw new Error('Instelling buiten bereik: '+key);}setParams(p);await calculate();$('export-status').textContent='Instellingen ingelezen; proef wordt opnieuw berekend.';}catch(error){$('export-status').textContent=error.message;}e.target.value='';});
+$('export-json').addEventListener('click',()=>{if(exportReady()){download('dubbele-slinger-proef.json',JSON.stringify({schema:'dubbele-slinger/v2',createdAt:new Date().toISOString(),model:primary.params.model==='rigid'?'twee uniforme slanke stangen met eigen massa en optionele puntmassa’s':'twee massaloze onrekbare touwen, puntmassa’s, stopt bij slapte',angleConvention:'absolute hoeken vanaf omlaag; positief rechts',units:{parametersAngles:'deg',parametersOmega:'deg/s',length:'m',mass:'kg',time:'s',damping:'N m s/rad',x:'rechts',y:'omhoog'},params:primary.params,status:primary.status,event:primary.event,diagnostics:primary.diagnostics,convergence,twin:{params:twin.params,status:twin.status,event:twin.event},measurementComparison:comparison?{count:comparison.count,rmse1Deg:comparison.rmse1Deg,rmse2Deg:comparison.rmse2Deg,excluded:comparison.excluded,timeOffset:Number($('time-offset').value),maxTime:Number($('compare-until').value)}:null},null,2),'application/json');$('export-status').textContent='Instellingen, modelgrens en numerieke controles bewaard.';}});
+$('import-json').addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;
+  try{
+    if(file.size>2e6)throw new Error('Maximaal 2 MB per proefbestand.');
+    const data=JSON.parse(await file.text());
+    if(!['dubbele-slinger/v1','dubbele-slinger/v2'].includes(data.schema)||!data.params)throw new Error('Geen ondersteund dubbele-slinger-proefbestand.');
+    const source=data.schema==='dubbele-slinger/v1'?{rodMass1:0,rodMass2:0,...data.params,model:'string'}:data.params;
+    if(!['string','rigid'].includes(source.model))throw new Error('Onbekend verbindingsmodel.');
+    const p={model:source.model};
+    for(const key of parameterNames){
+      if(typeof source[key]!=='number'||!Number.isFinite(source[key]))throw new Error('Ongeldige instelling: '+key);
+      p[key]=source[key];const input=$(key),minimum=['m1','m2'].includes(key)?(p.model==='rigid'?0:.01):Number(input.min);
+      if(input.tagName==='SELECT'&&![...input.options].some(o=>Number(o.value)===p[key]))throw new Error('Niet-ondersteunde tijdstap.');
+      if((input.min!==''&&p[key]<minimum)||(input.max!==''&&p[key]>Number(input.max)))throw new Error('Instelling buiten bereik: '+key);
+    }
+    setParams(p);await calculate();$('export-status').textContent='Instellingen ingelezen; proef wordt opnieuw berekend.';
+  }catch(error){$('export-status').textContent=error.message;}
+  e.target.value='';
+});
 
 let resizePending=false;new ResizeObserver(()=>{if(!resizePending){resizePending=true;requestAnimationFrame(()=>{resizePending=false;drawAll();});}}).observe(document.querySelector('.simulation-column'));
 document.addEventListener('visibilitychange',()=>{lastFrame=0;});
@@ -163,4 +189,4 @@ function frame(timestamp){
   if(playing&&primary&&!document.hidden){if(lastFrame){currentTime=Math.min(primary.samples.at(-1).t,currentTime+Math.min((timestamp-lastFrame)/1000,.1)*Number($('speed').value));$('timeline').value=currentTime;drawAll();if(currentTime>=primary.samples.at(-1).t)setPlay(false);}lastFrame=timestamp;}
   requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);calculate();
+setParams({...DEFAULTS,...presets.rods});requestAnimationFrame(frame);calculate();

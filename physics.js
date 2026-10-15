@@ -1,16 +1,19 @@
 /**
- * Planar double pendulum, valid only while both ideal strings remain taut.
+ * Planar double pendulum: ideal taut strings OR uniform rigid slender rods.
  * Coordinates: x right, y up; both absolute angles measured from vertically down.
  * Public parameters use degrees and degrees/s; states/samples use radians.
  * State: [theta1, theta2, omega1, omega2, dissipatedEnergy].
  *
  * Undamped equations checked against Erik Neumann's Newtonian derivation:
  * https://www.myphysicslab.com/pendulum/double-pendulum-en.html
+ * Rigid-body COM/force/torque formulation checked against Neumann (2011):
+ * https://www.myphysicslab.com/develop/docs/Rigid_Double_Pendulum.pdf
  * Damping is an optional phenomenological generalized torque model, NOT a
  * calibrated aerodynamic or literal string-hinge friction model.
  */
 
 export const DEFAULTS = Object.freeze({
+  model: 'string', rodMass1: 0, rodMass2: 0,
   s1: 0.5, s2: 0.5, m1: 0.2, m2: 0.2, g: 9.81, c1: 0, c2: 0,
   theta1: 25, theta2: -15, omega1: 0, omega2: 0,
   duration: 20, dt: 0.001, perturbation: 0.1,
@@ -25,13 +28,28 @@ export function validateParams(input = {}) {
   const params = { ...DEFAULTS, ...input };
   const errors = [];
   for (const key of Object.keys(DEFAULTS)) {
+    if (key === 'model') continue;
     if (typeof params[key] !== 'number' || !Number.isFinite(params[key])) {
       errors.push(`${key}: geef een eindig getal op.`);
     }
   }
+  if (!['string', 'rigid'].includes(params.model)) errors.push('model: kies string of rigid.');
   if (errors.length) return { ok: false, errors, params };
-  for (const key of ['s1', 's2', 'm1', 'm2']) {
+  for (const key of ['s1', 's2']) {
     if (params[key] < 0.0001 || params[key] > 1000) errors.push(`${key}: kies 0,0001 t/m 1000.`);
+  }
+  for (const key of ['m1', 'm2']) {
+    const minimum = params.model === 'rigid' ? 0 : 0.0001;
+    if (params[key] < minimum || params[key] > 1000) errors.push(`${key}: kies ${minimum} t/m 1000 kg.`);
+  }
+  for (const key of ['rodMass1', 'rodMass2']) {
+    if (params[key] < 0 || params[key] > 1000) errors.push(`${key}: kies 0 t/m 1000 kg.`);
+  }
+  if (params.model === 'rigid' && errors.length === 0) {
+    const { A, C, determinantFloor } = rigidCoefficients(params);
+    if (!(A > 0 && C > 0 && determinantFloor > 0)) {
+      errors.push('De stangconfiguratie heeft onvoldoende onafhankelijke traagheid. Voeg massa toe aan beide bewegende delen; alleen een eindgewicht aan twee massaloze stangen is singulier bij uitlijning.');
+    }
   }
   if (params.g < 0 || params.g > 100) errors.push('g: kies 0 t/m 100 m/s².');
   for (const key of ['c1', 'c2']) {
@@ -47,11 +65,36 @@ export function validateParams(input = {}) {
   return { ok: errors.length === 0, errors, params };
 }
 
+/** Uniform rods have COM at L/2 and COM inertia r*L²/12. */
+function rigidCoefficients(p) {
+  const r1 = p.rodMass1 ?? 0, r2 = p.rodMass2 ?? 0;
+  const A = (p.m1 + p.m2 + r2 + r1 / 3) * p.s1 ** 2;
+  const K = (p.m2 + r2 / 2) * p.s1 * p.s2;
+  const C = (p.m2 + r2 / 3) * p.s2 ** 2;
+  const G1 = (p.m1 + p.m2 + r2 + r1 / 2) * p.g * p.s1;
+  const G2 = (p.m2 + r2 / 2) * p.g * p.s2;
+  // A*C-K² expanded into nonnegative terms to avoid cancellation.
+  const determinantFloor = p.s1 ** 2 * p.s2 ** 2 * (
+    (p.m1 + r1 / 3) * (p.m2 + r2 / 3) + p.m2 * r2 / 3 + r2 * r2 / 12);
+  return { A, K, C, G1, G2, determinantFloor };
+}
+
 /** Lagrange mass-matrix equations. Parameters must already be validated. */
 export function derivative(state, p) {
   const [a, b, u, v] = state;
   const delta = a - b;
   const sd = Math.sin(delta), cd = Math.cos(delta);
+  if (p.model === 'rigid') {
+    const { A, K, C, G1, G2, determinantFloor } = rigidCoefficients(p);
+    const B = K * cd, relative = v - u;
+    const torque1 = -p.c1 * u + p.c2 * relative;
+    const torque2 = -p.c2 * relative;
+    const f1 = -K * sd * v * v - G1 * Math.sin(a) + torque1;
+    const f2 = K * sd * u * u - G2 * Math.sin(b) + torque2;
+    const determinant = determinantFloor + K * K * sd * sd;
+    return [u, v, (C * f1 - B * f2) / determinant,
+      (A * f2 - B * f1) / determinant, p.c1 * u * u + p.c2 * relative * relative];
+  }
   const total = p.m1 + p.m2;
   const coupling = p.m2 * p.s1 * p.s2;
   const A = total * p.s1 * p.s1;
@@ -71,6 +114,11 @@ export function derivative(state, p) {
 /** Energy [J], with gravitational potential zero in the bottom configuration. */
 export function energy(state, p) {
   const [a, b, u, v] = state;
+  if (p.model === 'rigid') {
+    const { A, K, C, G1, G2 } = rigidCoefficients(p);
+    return 0.5 * A * u * u + 0.5 * C * v * v + K * u * v * Math.cos(a - b)
+      + 2 * G1 * Math.sin(a / 2) ** 2 + 2 * G2 * Math.sin(b / 2) ** 2;
+  }
   const kinetic = 0.5 * (p.m1 + p.m2) * p.s1 ** 2 * u * u
     + 0.5 * p.m2 * p.s2 ** 2 * v * v
     + p.m2 * p.s1 * p.s2 * u * v * Math.cos(a - b);
@@ -80,10 +128,33 @@ export function energy(state, p) {
   return kinetic + potential;
 }
 
-/** Positive is tension. A negative reaction would require an impossible push. */
+/**
+ * Strings: positive = pull; a negative tension requires an impossible push.
+ * Rigid: tension1/2 are axial projections of support/joint reaction forces at
+ * the TOP of each rod, positive toward its upstream pivot; negative is allowed.
+ * These projections are not the axial load everywhere along a massive rod.
+ * reaction1 is the support force on the whole assembly; reaction2 is the force
+ * of the upper body on the LOWER rod+tip-mass body. Damping acts as pure couples.
+ */
 export function tensions(state, p) {
   const [a, b, u, v] = state;
   const [, , alpha1, alpha2] = derivative(state, p);
+  if (p.model === 'rigid') {
+    const r1 = p.rodMass1 ?? 0, r2 = p.rodMass2 ?? 0;
+    const jointAX = p.s1 * (alpha1 * Math.cos(a) - u * u * Math.sin(a));
+    const jointAY = p.s1 * (alpha1 * Math.sin(a) + u * u * Math.cos(a));
+    const relativeAX = p.s2 * (alpha2 * Math.cos(b) - v * v * Math.sin(b));
+    const relativeAY = p.s2 * (alpha2 * Math.sin(b) + v * v * Math.cos(b));
+    // Σ m*a_COM = F_support + Σ m*g. COM1 acceleration is jointA/2;
+    // COM2 acceleration is jointA + relativeA/2, tipA=jointA+relativeA.
+    const reaction2X = (r2 + p.m2) * jointAX + (r2 / 2 + p.m2) * relativeAX;
+    const reaction2Y = (r2 + p.m2) * (jointAY + p.g) + (r2 / 2 + p.m2) * relativeAY;
+    const reaction1X = (r1 / 2 + p.m1) * jointAX + reaction2X;
+    const reaction1Y = (r1 / 2 + p.m1) * jointAY + (r1 + p.m1) * p.g + reaction2Y;
+    return { tension1: -reaction1X * Math.sin(a) + reaction1Y * Math.cos(a),
+      tension2: -reaction2X * Math.sin(b) + reaction2Y * Math.cos(b),
+      reaction1X, reaction1Y, reaction2X, reaction2Y };
+  }
   const sd = Math.sin(a - b), cd = Math.cos(a - b);
   const tension1 = (p.m1 + p.m2) * (p.g * Math.cos(a) + p.s1 * u * u)
     - p.m2 * p.s2 * alpha2 * sd + p.m2 * p.s2 * v * v * cd;
@@ -132,6 +203,16 @@ function slackEvent(t, state, h, p, endTensions) {
 function numericalStepLimit(state, p) {
   // Keep RK4 stable for short strings, high velocities and strong damping.
   // lambda_min(M) >= det(M)/trace(M), using the global minimum determinant.
+  if (p.model === 'rigid') {
+    const { A, K, C, G1, G2, determinantFloor } = rigidCoefficients(p);
+    // Upper bounds for damping and gravity frequencies over all configurations.
+    // Using generalized eigenvalues avoids a spurious stiffness blow-up when
+    // one rod is very light but has a finite physical pendulum frequency.
+    const dampingRateBound = (C * (p.c1 + p.c2) + A * p.c2 + 2 * K * p.c2) / determinantFloor;
+    const frequencyBound = Math.sqrt((C * G1 + A * G2
+      + Math.hypot(C * G1 - A * G2, 2 * K * Math.sqrt(G1 * G2))) / (2 * determinantFloor));
+    return 0.08 / Math.max(1, dampingRateBound, frequencyBound, Math.abs(state[2]), Math.abs(state[3]));
+  }
   const inertiaLowerBound = p.m2 * p.s1 ** 2 * p.s2 ** 2 * p.m1
     / ((p.m1 + p.m2) * p.s1 ** 2 + p.m2 * p.s2 ** 2);
   const dampingRateBound = (p.c1 + 2 * p.c2) / inertiaLowerBound;
@@ -140,7 +221,7 @@ function numericalStepLimit(state, p) {
 }
 
 /**
- * Integrate until duration or the first loss of string tension. RK4 steps never
+ * Integrate until duration or (strings only) the first loss of tension. RK4 steps never
  * exceed dt/2; tensions are checked on this finer grid. Event accuracy still
  * depends on dt, so use compareConvergence before quantitative experiments.
  */
@@ -154,6 +235,7 @@ export function simulate(input = {}, integrationOptions = {}) {
     validation.errors.push('stabilityRefinement: kies een factor van 1 t/m 16.');
   }
   const diagnostics = {
+    forceSemantics: p.model === 'rigid' ? 'axial-support-and-joint-reaction' : 'string-tension',
     steps: 0, sampleInterval: SAMPLE_INTERVAL, maxStep: 0,
     stabilityRefinement, stabilityLimitedSteps: 0,
     initialEnergy: 0, finalEnergy: 0, dissipatedEnergy: 0, energyScale: 1,
@@ -169,7 +251,10 @@ export function simulate(input = {}, integrationOptions = {}) {
   let t = 0, nextOutput = SAMPLE_INTERVAL;
   const first = sample(0, state, p);
   diagnostics.initialEnergy = first.energy;
-  diagnostics.energyScale = Math.max(first.energy, (p.m1 + p.m2) * p.g * p.s1 + p.m2 * p.g * p.s2, 1e-12);
+  const gravityScale = p.model === 'rigid'
+    ? rigidCoefficients(p).G1 + rigidCoefficients(p).G2
+    : (p.m1 + p.m2) * p.g * p.s1 + p.m2 * p.g * p.s2;
+  diagnostics.energyScale = Math.max(first.energy, gravityScale, 1e-12);
 
   function observe(s) {
     diagnostics.finalEnergy = s.energy;
@@ -191,8 +276,8 @@ export function simulate(input = {}, integrationOptions = {}) {
     else result.samples.push(s);
   }
   push(first);
-  if (first.tension1 < -1e-12 * Math.max(1, (p.m1 + p.m2) * p.g)
-      || first.tension2 < -1e-12 * Math.max(1, p.m2 * p.g)) {
+  if (p.model === 'string' && (first.tension1 < -1e-12 * Math.max(1, (p.m1 + p.m2) * p.g)
+      || first.tension2 < -1e-12 * Math.max(1, p.m2 * p.g))) {
     const string = first.tension1 < 0 ? 1 : 2;
     result.status = 'slack';
     result.event = { t: 0, string, tension: first[`tension${string}`], initial: true };
@@ -212,7 +297,7 @@ export function simulate(input = {}, integrationOptions = {}) {
       diagnostics.steps++;
       if (stabilityLimit < p.dt / 2) diagnostics.stabilityLimitedSteps++;
       diagnostics.maxStep = Math.max(diagnostics.maxStep, h);
-      if (next.tension1 < 0 || next.tension2 < 0) {
+      if (p.model === 'string' && (next.tension1 < 0 || next.tension2 < 0)) {
         const event = slackEvent(t, state, h, p, next);
         push(sample(event.t, event.state, p));
         result.status = 'slack';

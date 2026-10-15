@@ -2,12 +2,12 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Simuleer een dubbele slinger met twee touwtjes. Vergelijk lengtes, massa’s, beginstanden en echte metingen.">
+  <meta name="description" content="Simuleer een dubbele slinger met touwen of massieve stangen. Vergelijk lengtes, massa’s, beginstanden en echte metingen.">
   <title>Dubbele slinger · Experimenteel lab</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="masthead"><a class="brand" href="#"><span class="brand-mark">∿</span> MECHANICA <b>/</b> LAB</a><span class="edition">MODEL 01 <span class="dot"></span> TWEE TOUWTJES</span></header>
+<header class="masthead"><a class="brand" href="#"><span class="brand-mark">∿</span> MECHANICA <b>/</b> LAB</a><span class="edition">MODEL 02 <span class="dot"></span> TOUW & STANG</span></header>
 <main>
   <section class="intro"><div><p class="eyebrow">VAN VOORSPELLING NAAR EXPERIMENT</p><h1>Dubbele slinger<span>.</span></h1><p class="lede">Eén opstelling. Twee vrijheidsgraden. Ontdek wat kleine verschillen met de beweging doen — en toets het aan je eigen proef.</p></div><a href="#meten" class="text-link">Vergelijk je metingen <span>↘</span></a></section>
   <section class="workspace" aria-label="Simulatie en instellingen">
@@ -15,13 +15,19 @@
       <div class="panel-title"><h2>De opstelling</h2><span class="step">01</span></div>
       <form id="settings-form">
         <label class="preset-label" for="preset">Start met een voorbeeld</label>
-        <select id="preset"><option value="default">Gekoppelde beweging · 25° / −15°</option><option value="small">Kleine uitslag · controleproef</option><option value="large">Grote uitslag · niet-lineair</option><option value="slack">Slap touw · modelgrens</option></select>
+        <select id="preset"><option value="rods" selected>Stangen · gedempt voorbeeld</option><option value="rotation">Stangen · grote uitslag</option><option value="default">Touw · 25° / −15°</option><option value="small">Touw · kleine uitslag</option><option value="large">Touw · grote uitslag</option><option value="slack">Slap touw · modelgrens</option></select>
+        <label class="preset-label model-label" for="model">Verbindingen</label>
+        <select id="model" name="model"><option value="string">Touw / draad · massaloos</option><option value="rigid" selected>Stijve stangen · met eigen massa</option></select>
+        <p class="hint" id="model-hint">Stangen kunnen trekken en duwen. Hun verdeelde massa telt mee.</p>
         <fieldset><legend>Geometrie & massa</legend><div class="field-grid">
           <label>Lengte s₁ <span>m</span><input id="s1" name="s1" type="number" min="0.05" max="3" step="any" value="0.5" required></label>
           <label>Lengte s₂ <span>m</span><input id="s2" name="s2" type="number" min="0.05" max="3" step="any" value="0.5" required></label>
-          <label>Massa m₁ <span>kg</span><input id="m1" name="m1" type="number" min="0.01" max="10" step="any" value="0.2" required></label>
-          <label>Massa m₂ <span>kg</span><input id="m2" name="m2" type="number" min="0.01" max="10" step="any" value="0.2" required></label>
-        </div><p class="hint">s₁: ophangpunt → middelpunt m₁.<br>s₂: middelpunt m₁ → middelpunt m₂.<br>Idealisatie: puntmassa’s, massaloze touwen.</p></fieldset>
+          <label>Extra massa m₁ <span>kg</span><input id="m1" name="m1" type="number" min="0" max="10" step="any" value="0" required></label>
+          <label>Extra massa m₂ <span>kg</span><input id="m2" name="m2" type="number" min="0" max="10" step="any" value="0" required></label>
+        </div><div class="field-grid rod-fields" id="rod-fields">
+          <label>Massa stang 1 <span>kg</span><input id="rodMass1" name="rodMass1" type="number" min="0" max="10" step="any" value="0.2" required></label>
+          <label>Massa stang 2 <span>kg</span><input id="rodMass2" name="rodMass2" type="number" min="0" max="10" step="any" value="0.2" required></label>
+        </div><p class="hint">s₁: ophangpunt → tussenscharnier.<br>s₂: tussenscharnier → eindpunt.<br>m₁ zit op het tussenscharnier; m₂ op het eindpunt.</p><p class="hint" id="mass-hint">Stangen: uniforme slanke staven. Geen extra gewichten? Zet m₁ en m₂ op 0.</p><p class="example-note">Voorbeeldwaarden. De afmetingen en massa’s van de practicumopstelling zijn nog niet bekend.</p></fieldset>
         <fieldset><legend>Beginstand</legend><div class="field-grid">
           <label>Hoek θ₁ <span>°</span><input id="theta1" name="theta1" type="number" min="-180" max="180" step="any" value="25" required></label>
           <label>Hoek θ₂ <span>°</span><input id="theta2" name="theta2" type="number" min="-180" max="180" step="any" value="-15" required></label>
@@ -47,14 +53,14 @@
         <div class="canvas-wrap"><canvas id="pendulum" aria-label="Animatie van de twee slingers, de baan en een vergelijkingsproef" role="img"></canvas><div class="scene-key"><span><i class="key-one"></i> m₁</span><span><i class="key-two"></i> m₂</span><label><input type="checkbox" id="show-twin" checked> vergelijkingsproef</label></div><div class="scene-scale" id="scale-label"></div></div>
         <div class="transport"><button id="play" class="play" aria-label="Afspelen">▶</button><button id="reset" class="icon-button" aria-label="Terug naar begin">↺</button><output id="time-readout">0,00 <small>s</small></output><input type="range" id="timeline" min="0" max="20" step="0.01" value="0" aria-label="Tijd in de simulatie"><select id="speed" aria-label="Afspeelsnelheid"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option></select></div>
       </section>
-      <div id="model-message" class="notice" role="status">Het touwmodel is geldig zolang beide touwen gespannen blijven.</div>
+      <div id="model-message" class="notice" role="status">De berekening wordt voorbereid.</div>
       <div class="metrics"><article><p>ENERGIEBALANS</p><strong id="energy-metric">—</strong><span>Max. fout in E + dissipatie</span></article><article><p>HALVE TIJDSTAP</p><strong id="step-metric">—</strong><span>Max. positieverschil m₁ / m₂</span></article><article><p>TWEE BEGINSTANDEN</p><strong id="twin-metric">—</strong><span>Verschil m₂ op huidige tijd</span></article></div>
     </div>
   </section>
   <section class="results" aria-labelledby="results-title"><div class="section-heading"><div><p class="eyebrow">LEES DE BEWEGING</p><h2 id="results-title">Het verhaal achter de baan</h2></div><p>Grafieken tonen de volledige berekende proef.<br>De verticale lijn volgt de afspeeltijd.</p></div>
     <div class="chart-grid">
       <article class="chart-card panel"><div class="chart-title"><h3>Hoeken in de tijd</h3><span>θ · graden</span></div><canvas id="angles-chart" role="img" aria-label="Hoeken theta 1 en theta 2 uitgezet tegen de tijd"></canvas><p><b class="ink-cyan">— θ₁</b> <b class="ink-coral">— θ₂</b> <span id="measurement-legend">· Absoluut vanaf verticaal omlaag</span></p></article>
-      <article class="chart-card panel"><div class="chart-title"><h3>Trekkracht in de touwen</h3><span>T · N</span></div><canvas id="tension-chart" role="img" aria-label="Touwspanningen T1 en T2 uitgezet tegen de tijd"></canvas><p><b class="ink-cyan">— T₁</b> <b class="ink-coral">— T₂</b> · Bij 0 N bereikt het model zijn grens.</p></article>
+      <article class="chart-card panel"><div class="chart-title"><h3 id="force-title">Axiale scharnierkrachten</h3><span id="force-unit">F · N</span></div><canvas id="tension-chart" role="img" aria-label="Krachten uitgezet tegen de tijd"></canvas><p><b class="ink-cyan" id="force-one">— F₁</b> <b class="ink-coral" id="force-two">— F₂</b> <span id="force-description">· Projectie langs de stang, aan het boveneinde.</span></p></article>
       <article class="chart-card panel"><div class="chart-title"><h3>Energie & verlies</h3><span>E · J</span></div><canvas id="energy-chart" role="img" aria-label="Mechanische energie en energie plus dempingsverlies"></canvas><p><b class="ink-cyan">— E</b> <b class="ink-muted">— E + verlies</b> · De tweede lijn hoort constant te blijven.</p></article>
       <article class="chart-card panel"><div class="chart-title"><h3>Gevoeligheid voor de start</h3><span>afstand m₂ · m</span></div><canvas id="separation-chart" role="img" aria-label="Afstand tussen massa 2 in twee bijna gelijke proeven"></canvas><p id="twin-description">Twee beginstanden; alleen θ₂ verschilt. Geen bewijs van chaos op zichzelf.</p></article>
     </div>
@@ -64,9 +70,9 @@
       <div class="field-grid"><label>Tijdstip loslaten in CSV <span>s</span><input id="time-offset" type="number" step="any" value="0"></label><label>Vergelijk tot simulatietijd <span>s</span><input id="compare-until" type="number" min="0.01" step="any" value="5"></label></div>
       <p class="hint">Modeltijd = CSV-tijd − tijdstip loslaten. Kies bewust een kort vergelijkingsvenster.</p><p id="measurement-status" role="status">Nog geen metingen geladen. Er is nog geen experimentele validatie.</p><div id="measurement-result" class="comparison-output"></div><div class="button-row"><button id="clear-measurements" class="secondary">Wis metingen</button><button id="csv-example" class="secondary">CSV-voorbeeld</button></div>
     </div></section>
-  <section class="bottom-grid"><article class="explanation panel"><p class="eyebrow">WAT DIT MODEL VOORSPELT</p><h2>Chaos heeft voorwaarden.</h2><p>Een dubbele slinger kan chaotisch bewegen. Bij kleine uitslagen zie je vaak regelmatige trillingen en energieoverdracht. Bij grotere uitslagen kunnen nabijgelegen beginstanden sterk uiteenlopen.</p><p>Met touwtjes kan vóór die ontwikkeling een touw slap vallen. Dit model stopt daar. Vrije val, botsingen, elastisch touw en het opnieuw strak trekken worden niet doorgerekend. Ook omvang van de gewichten, luchtweerstand en beweging buiten het vlak kunnen het experiment veranderen.</p><p class="hint">Rekenmethode: RK4, interne stap ≤ Δt/2 (zo nodig kleiner), uitvoer rond 100 Hz. Controle met een verdere halvering. Numerieke overeenstemming is geen bewijs van overeenkomst met je opstelling.</p></article><article class="export panel"><p class="eyebrow">BEWAAR JE PROEF</p><h2>Herhaalbaar vanaf de start.</h2><p>Bewaar de voorspelling en de gebruikte instellingen samen met je video en meetbestand.</p><button id="export-csv" class="secondary wide">↓ Download simulatie · CSV</button><button id="export-json" class="secondary wide">↓ Download proef · JSON</button><label class="secondary wide import-json" for="import-json">↑ Herstel instellingen uit JSON<input id="import-json" type="file" accept="application/json,.json"></label><p id="export-status" class="hint" role="status">Alle bestanden worden lokaal verwerkt.</p></article></section>
+  <section class="bottom-grid"><article class="explanation panel"><p class="eyebrow">WAT DIT MODEL VOORSPELT</p><h2>Chaos heeft voorwaarden.</h2><p>Een dubbele slinger kan chaotisch bewegen. Bij kleine uitslagen zie je vaak regelmatige trillingen en energieoverdracht. Bij grotere uitslagen kunnen nabijgelegen beginstanden sterk uiteenlopen. Demping kan die beweging weer laten uitdoven.</p><p>Het stangenmodel neemt verdeelde massa en rotatietraagheid mee en laat volledige omwentelingen toe. De video toont stijve strippen; voor een gekalibreerde voorspelling ontbreken nog de gemeten afmetingen, massa’s en beginstand.</p><p>Het touwmodel stopt zodra een touw slap wordt. Vrije val, opnieuw strak trekken, rek, botsingen en beweging buiten het vlak worden niet doorgerekend. De stangen zijn uniform en slank, met scharnieren aan de uiteinden; overhang en niet-uniforme gewichten vragen een uitgebreider model.</p><p class="hint">Rekenmethode: RK4, interne stap ≤ Δt/2 (zo nodig kleiner), uitvoer rond 100 Hz. Controle met een verdere halvering. Numerieke overeenstemming is geen bewijs van overeenkomst met je opstelling.</p></article><article class="export panel"><p class="eyebrow">BEWAAR JE PROEF</p><h2>Herhaalbaar vanaf de start.</h2><p>Bewaar de voorspelling en de gebruikte instellingen samen met je video en meetbestand.</p><button id="export-csv" class="secondary wide">↓ Download simulatie · CSV</button><button id="export-json" class="secondary wide">↓ Download proef · JSON</button><label class="secondary wide import-json" for="import-json">↑ Herstel instellingen uit JSON<input id="import-json" type="file" accept="application/json,.json"></label><p id="export-status" class="hint" role="status">Alle bestanden worden lokaal verwerkt.</p></article></section>
 </main>
-<footer><span>MECHANICA / LAB <b>·</b> Dubbele slinger v1.0</span><span>Model → voorspelling → meting → vergelijking</span></footer>
+<footer><span>MECHANICA / LAB <b>·</b> Dubbele slinger v2.0</span><span>Model → voorspelling → meting → vergelijking</span></footer>
 <script type="module" src="app.js"></script>
 </body>
 </html>

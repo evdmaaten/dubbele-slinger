@@ -172,10 +172,24 @@ export function compareMeasurements(measurements, samples, { timeOffset = 0, max
   };
 }
 
-/** Export simulation samples. Positions are meters: x right, y up. */
+/**
+ * Export simulation samples. Positions are meters: x right, y up.
+ * Pass the full simulation result for rigid mode so params.model identifies the
+ * force semantics. Bare sample arrays retain the original string-model format.
+ * Rigid axial reactions are signed projections at the rod's upper attachment;
+ * they are not uniform rod stresses. Cartesian reactions use x right, y up.
+ */
 export function exportSimulationCSV(result) {
   const samples = Array.isArray(result) ? result : result?.samples;
   if (!Array.isArray(samples)) throw new Error('Er zijn geen simulatieregels om te exporteren.');
+  const rigid = result?.params?.model === 'rigid';
+  const forceColumns = rigid ? [
+    ['axial_reaction1_N', 'tension1', 1], ['axial_reaction2_N', 'tension2', 1],
+    ['reaction1_x_N', 'reaction1X', 1], ['reaction1_y_N', 'reaction1Y', 1],
+    ['reaction2_x_N', 'reaction2X', 1], ['reaction2_y_N', 'reaction2Y', 1],
+  ] : [
+    ['tension1_N', 'tension1', 1], ['tension2_N', 'tension2', 1],
+  ];
   const columns = [
     ['t', 't', 1],
     ['theta1_deg', 'theta1', RAD_TO_DEG],
@@ -185,7 +199,7 @@ export function exportSimulationCSV(result) {
     ['x1_m', 'x1', 1], ['y1_m', 'y1', 1],
     ['x2_m', 'x2', 1], ['y2_m', 'y2', 1],
     ['energy_J', 'energy', 1],
-    ['tension1_N', 'tension1', 1], ['tension2_N', 'tension2', 1],
+    ...forceColumns,
     ['dissipated_J', 'dissipated', 1],
   ];
   return [
