@@ -1,0 +1,9 @@
+{
+  "name": "dubbele-slinger",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Een meetbaar simulatiemodel van een dubbele slinger met touwtjes.",
+  "scripts": { "start": "node server.mjs", "test": "node --test", "build": "node build.mjs" },
+  "engines": { "node": ">=20" }
+}
