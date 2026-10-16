@@ -58,6 +58,11 @@ rodMass1=0.2703, rodMass2=0.2000 en m1=m2=0 in het stangenmodel.
 Uniformiteit, zwaartepunten, traagheidsmomenten, demping, markergeometrie,
 hoekreferentie en echte tijdschaal zijn hiermee nog niet gekalibreerd.
 
+Een voorwaardelijke voorspelling met de bevestigde staafmassa's maak je met
+compare_measured_paths.mjs en render_model_comparison.py. Zie het protocol
+PAD-MODEL-VERGELIJKING.md voor scenario's, initialisatie, foutmaten en het
+inladen van de instellingen plus meetpaden in de HTML-interface.
+
 Deze analyse uploadt niets. Bronvideo en gegenereerde meetgegevens blijven
 lokaal onder .local-data (uitgesloten van Git). Het ZIP-resultaat bevat geen
 bronvideo, wel enkele geannoteerde stills voor controle.
