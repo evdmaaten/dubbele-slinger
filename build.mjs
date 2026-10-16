@@ -7,9 +7,10 @@ const directory = dirname(fileURLToPath(import.meta.url));
 const read = (name) => readFile(join(directory, name), 'utf8');
 const dataURL = (mime, text) => `data:${mime};charset=utf-8;base64,${Buffer.from(text, 'utf8').toString('base64')}`;
 
-const [template, stylesheet, physics, measurements, appSource, protocol, paths, pathViewSource] = await Promise.all([
+const [template, stylesheet, physics, measurements, appSource, protocol, paths, pathViewSource, lyapunov, lyapunovViewSource] = await Promise.all([
   read('index.html'), read('style.css'), read('physics.js'),
   read('measurements.js'), read('app.js'), read('README.md'), read('paths.js'), read('path-view.js'),
+  read('lyapunov.js'), read('lyapunov-view.js'),
 ]);
 
 // Preserve separate module scopes and exports. Only module URLs are rewritten;
@@ -18,13 +19,19 @@ let pathImportCount = 0;
 const pathView = pathViewSource.replace(/(\bfrom\s*)(['"])(\.\/paths\.js)\2/g,
   (_match, prefix, quote) => { pathImportCount += 1; return `${prefix}${quote}${dataURL('text/javascript', paths)}${quote}`; });
 if (pathImportCount !== 1) throw new Error('Expected one paths.js import in path-view.js.');
+let lyapunovImportCount = 0;
+const lyapunovDependencies = new Map([['./lyapunov.js',lyapunov],['./measurements.js',measurements]]);
+const lyapunovView = lyapunovViewSource.replace(/(\bfrom\s*)(['"])(\.\/(?:lyapunov|measurements)\.js)\2/g,
+  (_match,prefix,quote,specifier) => { lyapunovImportCount++; return `${prefix}${quote}${dataURL('text/javascript',lyapunovDependencies.get(specifier))}${quote}`; });
+if(lyapunovImportCount !== 2) throw new Error('Expected both analysis dependencies in lyapunov-view.js.');
 const embeddedModules = new Map([
   ['./physics.js', dataURL('text/javascript', physics)],
   ['./measurements.js', dataURL('text/javascript', measurements)],
   ['./path-view.js', dataURL('text/javascript', pathView)],
+  ['./lyapunov-view.js', dataURL('text/javascript', lyapunovView)],
 ]);
 let importCount = 0;
-const app = appSource.replace(/(\bfrom\s*)(['"])(\.\/(?:physics|measurements|path-view)\.js)\2/g,
+const app = appSource.replace(/(\bfrom\s*)(['"])(\.\/(?:physics|measurements|path-view|lyapunov-view)\.js)\2/g,
   (_match, prefix, quote, specifier) => {
     importCount += 1;
     return `${prefix}${quote}${embeddedModules.get(specifier)}${quote}`;

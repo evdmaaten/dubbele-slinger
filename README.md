@@ -11,7 +11,7 @@ Interactief model van een dubbele slinger, gebaseerd op de aangeleverde schets. 
 
 Een flexibele draad valt hier onder de touwmodus; buigstijfheid wordt niet gemodelleerd. Slap touw, vrije vlucht en de schok bij opnieuw strak trekken zijn nog niet geïmplementeerd. Een touwstart die een duwkracht vereist wordt meteen afgewezen. Stangen worden als perfect stijf beschouwd; botsingen, knikken en een mechanische rotatiestop zijn niet inbegrepen.
 
-De lokaal bekeken praktijkvideo toont twee stijve, vlakke strips met draaipunten en gele markeringen bij tussenpunt en eindpunt. Daarom past de **stangmodus** bij het zichtbare mechanisme. De bovenste strip lijkt langer; de beweging dempt zichtbaar uit gedurende de opname van ongeveer 83 s. Dit zijn beeldobservaties. Uniforme slanke stangen blijven een benadering van deze strips. De voorbeeldinstellingen zijn nog niet op de video afgestemd. De video is niet naar de repository geüpload en er is nog geen gemeten hoekreeks geïmporteerd.
+De lokaal bekeken praktijkvideo toont twee stijve, vlakke strips met draaipunten en gekleurde markeringen. Daarom past de **stangmodus** bij het zichtbare mechanisme. De bovenste strip lijkt langer; de beweging dempt zichtbaar uit gedurende de opname van ongeveer 83 s. Dit zijn beeldobservaties. Uniforme slanke stangen blijven een benadering van deze strips. De voorbeeldinstellingen zijn nog niet op de video afgestemd. De video en daaruit gevolgde hoek- en positiegegevens blijven lokaal; tijdschaal, camera en massaverdeling zijn nog niet volledig gekalibreerd.
 
 ### Aangeleverde practicumgegevens
 
@@ -58,7 +58,7 @@ De numerieke en importtests starten met:
 npm test
 ```
 
-Zie [VALIDATIE.md](VALIDATIE.md) voor de uitgevoerde numerieke controles en referentie-uitkomsten. Een geslaagde softwaretest is geen validatie tegen de fysieke opstelling. Er zijn nog geen echte meetresultaten geleverd waarmee overeenkomst met de werkelijkheid kan worden vastgesteld.
+Zie [VALIDATIE.md](VALIDATIE.md) voor de uitgevoerde numerieke controles, referentie-uitkomsten en controles met de lokale video. Een geslaagde softwaretest is geen validatie tegen de fysieke opstelling. Er zijn echte videometingen beschikbaar, maar de ontbrekende kalibratie verhindert nog een bevestigde kwantitatieve overeenkomst met de werkelijkheid.
 
 ## Instellingen en conventies
 
@@ -84,7 +84,7 @@ De standaardwaarden zijn voorbeelden, geen gemeten eigenschappen van jouw opstel
 
 De interface opent met een **gedempt stangenvoorbeeld**: twee stangen van `0,5 m` en `0,2 kg`, zonder extra puntgewichten, beginhoeken `25° / −15°`, `c1 = 0,002` en `c2 = 0,001 N·m·s/rad`. Ook deze lengtes, massa's en demping zijn niet uit de video bepaald. De touwvoorbeelden blijven via de keuzelijst beschikbaar.
 
-De tweede, bijna gelijke simulatie begint met een kleine hoekverstoring. Het verschil tussen beide banen laat gevoeligheid voor de begintoestand zien. Dit is geen berekende Lyapunov-exponent en bewijst op zichzelf geen chaos. Bij kleine uitwijkingen is het gedrag vaak bijna lineair; ook andere begintoestanden kunnen regelmatig bewegen. Grote hoeken geven bij touwen bovendien eerder een overgang naar slap touw. Zie de [oorspronkelijke modelafleiding van myPhysicsLab](https://www.myphysicslab.com/pendulum/double-pendulum-en.html).
+De tweede, bijna gelijke simulatie begint met een kleine hoekverstoring. Het verschil tussen beide banen laat gevoeligheid voor de begintoestand zien. De gewone afstandsgrafiek is geen Lyapunov-exponent; de afzonderlijke faseruimteanalyse hieronder rapporteert een helling over een gekozen venster. Geen van beide bewijst op zichzelf chaos. Bij kleine uitwijkingen is het gedrag vaak bijna lineair; ook andere begintoestanden kunnen regelmatig bewegen. Grote hoeken geven bij touwen bovendien eerder een overgang naar slap touw. Zie de [oorspronkelijke modelafleiding van myPhysicsLab](https://www.myphysicslab.com/pendulum/double-pendulum-en.html).
 
 ## Wat je uit de interface kunt halen
 
@@ -173,6 +173,68 @@ De markerfracties bepalen waar het te vergelijken modelpunt op iedere stang ligt
 Het gekozen tijdvenster wordt beperkt tot de overlap van meting en geldige simulatie. De grafieken tonen een ruimtelijk pad over dat hele venster; zij volgen niet de afspeelcursor. Er wordt geen ruimtelijke foutscore of automatische kalibratie berekend. De vergelijkingsinstellingen komen mee in de proef-JSON; het meetbestand moet opnieuw lokaal worden geladen.
 
 Het lokale script `analysis/render_trails.py` maakt, na `track_video.py` en `report_video.py`, een MP4 met de recente sporen, een volledige padgrafiek en `bewegingspaden.csv`. Historische markerposities worden alleen voor de gemeten verschuiving van het bovenste draaipunt gecorrigeerd. Bronvideo en meetgegevens staan onder `.local-data/` en worden niet automatisch gepubliceerd.
+
+## Faseruimte, divergentie en de fithelling
+
+De gebruiker heeft bevestigd dat de aangeleverde voorbeeldgrafiek op **één opname** berust. Daarin wisselt de blauwe `ln(delta(t)/delta0)` sterk en is visueel geen langdurig stijgend, ongeveer recht gebied te zien. De rode lijn past alleen een kort beginsegment en vermeldt `2,4544 s⁻¹`. Zonder de bronreeksen, norm, tijdskalibratie en fitkeuze is dat getal niet reproduceerbaar. De app probeert dit getal niet te bereiken.
+
+| Analyse | Wat wordt vergeleken? | Wat betekent de helling? |
+| --- | --- | --- |
+| Eén meetreeks | Nabije toestanden op verschillende momenten in dezelfde opname, daarna in de tijd gevolgd | Verkennende gemiddelde divergentie over een eindig venster |
+| Twee simulaties | De hoofdbaan en de bijna gelijke tweede beginvoorwaarde | Groei of afname van dit specifieke verschil; geen maximale Lyapunov-exponent |
+| Meting tegenover model | Gemeten toestand en voorspelde toestand op overeenkomstige tijdstippen | Modelafwijking, inclusief meet-, kalibratie- en parameterfouten; geen Lyapunov-exponent |
+
+Gebruik in **Divergentie & Lyapunov-fit** de keuze **Eén opname · nabije toestanden** en laad lokaal een hoek-CSV met `t,theta1_deg,theta2_deg`, bijvoorbeeld `hoeken-videotijd.csv`. De pixel-CSV met bewegingspaden is een ander formaat. Kies het bewegende deel van de opname, normtijd, snelheidsvenster, buurcriteria en fitinterval; klik na wijzigingen op **Analyseer divergentie**. De grafiek gebruikt bij één opname de verstreken volgtijd vanaf ieder buurpaar, niet de absolute videotijd. De blauwe curve is een gemiddelde en hoeft dus niet zo grillig te zijn als de aangeleverde afbeelding.
+
+De instellingen `13,5–70` videoseconden, snelheidsvenster `11` punten, Theiler-venster `6`, volghorizon `0,5`, beginafstand `0,05–0,2` en fitvenster `0,1–0,4` zijn verkennende voorbeelden voor de huidige opname. De tijdvensters staan op de gekozen analyse-tijdas, behalve het analysebegin/-einde en de maximale tijdstap tussen meetpunten, die in oorspronkelijke CSV-seconden staan. Deze instellingen vormen geen vastgestelde kalibratie of optimale fitkeuze. De minimumafstand is geen gemeten ruisvloer.
+
+Je kunt de grafiek als SVG, de divergentiepunten als CSV en het analyserapport als JSON downloaden. **Herstel analyserapport** zet de instellingen terug; het JSON-rapport bevat geen ruwe meetreeks, dus laad de oorspronkelijke lokale hoek-CSV opnieuw. Ook het gewone proefbestand bewaart de analyse-instellingen. Gebruik **Videotijd · fysieke schaal onbekend** met factor 1 totdat een omzetting is bevestigd; **Scenario** laat een onbevestigde omzetting expliciet onderzoeken. Een keuze in de interface bewijst niet dat de tijdschaal klopt.
+
+Voor de reeds gevolgde practicumvideo reproduceert `node analysis/analyze_divergence.mjs .local-data/video-analyse` de lokale analyse uit `tracking-raw.csv`, `tracking-quality.csv` en `hoeken-videotijd.csv`. De bestanden `faseruimte-divergentie.json`, `.csv` en `.svg` blijven in die lokale map. Het afzonderlijke `faseruimte-instellingen.json` is geschikt voor **Herstel analyserapport**: herstel dit eerst en laad daarna `hoeken-videotijd.csv`. Het uitgebreide `faseruimte-divergentie.json` is het onderzoeksrapport, geen importbestand voor de interface. Het script gebruikt de oorspronkelijke framekwaliteit en dezelfde hoekafronding als de browserimport. Het vergelijkt ook andere snelheidsvensters, een langer Theiler-venster en een kleinere maximale beginafstand. Het heeft geen bronvideo of meetwaarden in de programmacode ingebouwd.
+
+Er is geen afzonderlijke importmodus voor twee experimentele herhalingen. Voor een dergelijke proef zijn twee zelfstandig gemeten, bijna gelijke begintoestanden en dezelfde kalibratie nodig; een simulatie geldt niet als tweede experiment.
+
+### De afstand heeft een vaste definitie
+
+De volledige toestand gebruikt beide absolute hoeken en beide hoeksnelheden. Hoeken staan intern in radialen; snelheden in radialen per gebruikte seconde. Een vooraf gekozen positieve tijdschaal `tau` maakt hun bijdrage aan de afstand vergelijkbaar:
+
+```text
+delta(a,b) = sqrt(wrap(theta1a-theta1b)^2 + wrap(theta2a-theta2b)^2
+                  + (tau*(omega1a-omega1b))^2 + (tau*(omega2a-omega2b))^2)
+```
+
+`wrap` neemt het kortste hoekverschil modulo `2*pi`. Een gelijke stand na een volledige omwenteling is dus dezelfde hoekpositie; de snelheden kunnen toch verschillen. `tau` blijft constant voor alle punten en analyses die je onderling vergelijkt. De app schaalt de componenten niet automatisch met hun gemeten spreiding. Een andere `tau` kan andere buren en andere eindige-vensterhellingen geven: noteer haar waarde en controleer deze gevoeligheid.
+
+Voor de huidige video zijn dit **beeldhoeken tussen gevolgde markeringen**. De markercentra zijn niet onafhankelijk als mechanische draaipunten geïdentificeerd; camerahoek en perspectief zijn ook niet gekalibreerd. De vier getallen vormen daarom een benadering van de fysieke toestand, geen bevestigde meting van de volledige mechanische faseruimte.
+
+### Eén opname: nabije toestanden volgen
+
+De aanpak is geïnspireerd op [Rosenstein, Collins & De Luca, *A practical method for calculating largest Lyapunov exponents from small data sets* (1993)](https://delucafoundation.org/download/bibliography/cjd/056.pdf). Die methode zoekt nabije toestanden buiten een uitsluitingsvenster in de tijd, volgt hun afstanden en fit het gemiddelde van de logafstanden in een ongeveer lineair groeigebied. Het artikel benadrukt een aanvankelijke overgang en latere verzadiging; die zijn niet hetzelfde als het gebied waaruit een exponent wordt geschat.
+
+Deze app gebruikt rechtstreeks de vier geschatte toestandcomponenten, geen delay-embedding van één scalar. Het is daarom een toepassing van het idee, geen ongewijzigde reproductie van het oorspronkelijke algoritme. De belangrijkste uitvoer is:
+
+```text
+Y(k) = gemiddelde over dezelfde paren j van ln(delta_j(k)/delta_j(0))
+Y(k) ≈ intercept + helling * verstreken_tijd
+```
+
+Elk paar bestaat uit twee nabije toestanden die in de opname voldoende ver uit elkaar liggen. Het **Theiler-venster** sluit directe temporele buren uit; kies het met kennis van de karakteristieke oscillatietijd en controleer meerdere verdedigbare waarden. Een te klein venster kan vooral opeenvolgende punten op dezelfde baan selecteren. Een naaste buur is bovendien niet noodzakelijk dichtbij genoeg voor lokale exponentiële groei.
+
+De paren moeten over de hele gevraagde volgduur bruikbaar zijn. Een vaste groep voorkomt dat de gemiddelde curve verandert doordat op latere tijden andere paren overblijven. Bij dezelfde groep verschilt het gemiddelde van de logratio's alleen door een constante van het gemiddelde van de logafstanden, zodat beide dezelfde vrije fithelling geven. Dit is niet hetzelfde als de logaritme van een gemiddelde afstand. De vaste selectie kan wel lange, goed gevolgde stukken bevoordelen; controleer de dekking en de beginafstanden.
+
+Hoeksnelheden uit video versterken meetruis. De app schat ze met de helling van een lokale lineaire regressie over een volledig, gecentreerd oneven puntenvenster. De gemeten hoeken zelf worden niet gladgestreken; de randpunten zonder volledig venster vallen af. Er wordt geen snelheid door een gat heen afgeleid. De hoekontwikkeling gebruikt de kortste stap tussen opeenvolgende geldige frames; een werkelijke draai van meer dan 180° tussen frames is daarmee niet eenduidig te reconstrueren. Varieer de vensterbreedte: filteren verwijdert niet alleen ruis en kan de divergentie veranderen.
+
+De volglags gebruiken de mediane meettijdstap. Interpolatie vindt uitsluitend binnen ononderbroken segmenten plaats en levert geen nieuwe onafhankelijke waarnemingen op. Er worden maximaal 250 verschillende ongeordende paren gevolgd, met minimaal 10 paren als softwarevoorwaarde; die aantallen zijn geen statistische kwaliteitsgarantie. Nulafstanden krijgen geen epsilon: als voor een paar de logaritme ongedefinieerd is, wordt het hele gemiddelde op die lag ongeldig, in plaats van met een andere groep verder te middelen. Een fit mag niet over zo'n ontbrekend punt of een meetgat lopen.
+
+### Interpretatie en tijdseenheid
+
+De rechte lijn heeft een vrije intercept en is alleen een kleinste-kwadratenfit binnen het aangegeven venster. Haar helling kan positief, nul of negatief zijn. Een positieve helling of een hoog `R²` is op zichzelf geen bewijs van chaos; opeenvolgende curvepunten en paren zijn gecorreleerd, dus het aantal punten is geen aantal onafhankelijke proeven. Zoek geen venster uitsluitend omdat het een positieve helling of `2,4544` oplevert. Controleer vroege meetruis, overgangsgedrag, verzadiging, het gekozen venster en reproduceerbaarheid.
+
+Bij normalisatie op de beginafstand is `Y(0)=0`. De vrije fitlijn hoeft niet door dat punt te gaan. De fithelling is ook niet per definitie `ln(delta(t)/delta0)/t`. Een maximale Lyapunov-exponent vereist aanvullende onderbouwing voor de limiet van kleine verstoringen en lange tijden; deze interface toont eindige-vensterresultaten.
+
+De echte opname dempt uit en doorloopt daardoor veranderende bewegingsregimes. Eén gemiddelde over de hele opname kan vooral de late beweging bij rust beschrijven; behandel dit niet als een stationaire chaotische attractor. Een vlakke of dalende curve bewijst evenmin dat iedere andere beginstand of ieder ander tijdvenster niet-chaotisch is.
+
+Zolang de vertraging niet vaststaat, heeft een videofit de eenheid **per videoseconde**. Als later `t_fysiek = t_video/f` wordt bevestigd, geldt voor exact dezelfde logafstandsreeks `helling_fysiek = f * helling_video`. Om dezelfde vierdimensionale norm te behouden moet dan ook `omega_fysiek = f * omega_video` en `tau_fysiek = tau_video/f` gelden. Deel voor dezelfde analyse ook het Theiler-venster, de horizon en de fitgrenzen door `f`; de velden in oorspronkelijke CSV-seconden blijven gelijk. Alleen de snelheden herschalen en `tau` gelijk laten verandert de norm en mogelijk de gekozen buren. De opgegeven 240 opnamefps bij 30 afspeelfps rechtvaardigt factor 8 pas als de framebewaring en afspeelvertraging zijn bevestigd.
 
 ## Rekenmodel
 

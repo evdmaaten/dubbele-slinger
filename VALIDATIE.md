@@ -2,7 +2,7 @@
 
 Controle uitgevoerd op 15 oktober 2026, met Node.js `v24.11.1` op Windows. De waarden hieronder zijn uit de JavaScript-rekenkern berekend. Ze beschrijven de software en het ideale model, niet een gemeten fysieke proef.
 
-**Numerieke controle: geslaagd binnen de geteste gevallen. Experimentele validatie: nog niet uitgevoerd.** Een lokale praktijkvideo is visueel bekeken, maar er zijn geen gekalibreerde videometingen of andere echte meetreeksen gebruikt. Overeenkomst met de praktische opstelling, en de duur waarover die overeenkomst bruikbaar is, zijn dus nog onbekend.
+**Numerieke controle: geslaagd binnen de geteste gevallen. Experimentele validatie: nog niet afgerond.** De aanvullingen beschrijven lokale videometingen en softwarecontroles daarmee. Er is nog geen volledig gekalibreerde vergelijking met de fysieke proef. Overeenkomst met de praktische opstelling, en de duur waarover die overeenkomst bruikbaar is, zijn dus nog onbekend.
 
 ## Wat is gecontroleerd
 
@@ -184,3 +184,72 @@ Het opnieuw gebouwde `standalone.html` is in Chrome via de lokale HTTP-preview g
 De testwaarden voor tijd en schaal zijn geen geverifieerde kalibratie. Het screenshot `.qa/padvergelijking-browser.png` toont het scenario met afzonderlijke pixels/metersassen. JSON-export bewaart de vergelijkingsinstellingen en bestandsnaam, zonder de meetpunten mee te sturen. De code herstelt alleen de instellingen; de CSV moet opnieuw worden geladen.
 
 De lokaal gemaakte spoorvideo behoudt alle 2.492 beelden, 30 fps, een duur van 83,067 s en de oorspronkelijke AAC-audiostream. De uitvoer is 1.024 × 700 pixels inclusief kop- en voetbalk. De hele MP4 is foutloos gedecodeerd; markercentra in drie bewegingsfasen komen overeen met de broncoördinaten. Lijnen worden niet over afgekeurde frames getrokken. Historische spoorpunten worden alleen voor translatie van het draaipunt gecorrigeerd. De opname bepaalt geen massamiddelpunten, fysieke tijdschaal of volledige camerakalibratie.
+
+## Aanvulling: interpretatie van divergentie (16 oktober 2026)
+
+De aangeleverde afbeelding **Faseruimte divergentie en Lyapunov-fit** is visueel bekeken. De gebruiker heeft bevestigd dat deze uit één opname komt. De blauwe logafstandsreeks wisselt over circa 0–9 s sterk, zonder zichtbaar langdurig stijgend lineair gebied. De rode lijn heeft volgens de legenda een helling van `2,4544 s⁻¹` en beslaat slechts het korte beginstuk. De afbeelding bevat onvoldoende informatie om de norm, onderliggende toestanden, tijdeenheid en gekozen fitpunten te reconstrueren. Het getal is daarom **niet onafhankelijk bevestigd**, en is geen referentiewaarde waaraan de nieuwe berekening is aangepast. Deze beoordeling is visueel; de grafiek is niet gedigitaliseerd.
+
+De methodologische basis is de primaire publicatie [Rosenstein, Collins & De Luca (1993)](https://delucafoundation.org/download/bibliography/cjd/056.pdf), gelezen bij de voorbereiding. Haar gemiddelde logafstanden van temporeel gescheiden nabije toestanden worden hier toegepast op beide hoeken en geschatte hoeksnelheden. In de video zijn dat beeldhoeken tussen markeringen, geen onafhankelijk gekalibreerde mechanische hoeken; de vierdimensionale toestand blijft een benadering. De implementatie gebruikt een vaste groep paren en logratio's ten opzichte van hun eigen beginafstand. Deze keuzes en de vaste normtijd `tau` staan in [README.md](README.md). Het is geen letterlijke reproductie van een scalar delay-embedding uit de publicatie.
+
+Voor de beoordeling blijven drie verschillende grootheden gescheiden:
+
+- Een gemiddelde divergentie uit nabije toestanden binnen één meetreeks is een verkennende schatting voor de gekozen gegevens, norm en vensters.
+- Een fit tussen twee bijna gelijke simulaties meet de groei van die specifieke verstoring over een eindige tijd; zonder aanvullende controles is dit geen maximale Lyapunov-exponent.
+- Een fit van meting minus simulatie meet modelafwijking. Parameterfouten, camera, tijdnul en meetruis kunnen haar helling bepalen; die helling is geen Lyapunov-exponent.
+
+Een vaste positieve `tau` weegt de snelheidsverschillen in de vierdimensionale norm. Er is geen automatische normalisatie op de spreiding van de gegevens en geen vereiste dat de helling positief wordt. De fit heeft een vrije intercept, ook wanneer de logratio op verstreken tijd nul begint. `R²` is een beschrijvende fitmaat en geen betrouwbaarheid van een chaosclaim. Curvepunten en buurplekken zijn niet onafhankelijk.
+
+De gedempte video doorloopt verschillende energieniveaus en eindigt nabij rust. Daardoor is een aanname van één stationaire chaotische attractor niet vastgesteld. De echte tijdschaal is ook onbekend: een helling op de primaire videotijdas heeft eenheid per videoseconde. Bij een bevestigde factor `f` schaalt dezelfde logafstandsreeks met `helling_fysiek = f * helling_video`; behoud van dezelfde norm vergt tegelijk `tau_fysiek = tau_video/f`. Dit is geen bevestiging van factor 8 voor de aangeleverde opname.
+
+### Verkennende uitkomst voor de lokale opname
+
+`analysis/analyze_divergence.mjs` leest `tracking-raw.csv`, `tracking-quality.csv` en `hoeken-videotijd.csv`; selectie en tijdstempels worden onderling gecontroleerd en de hoekprecisie is gelijk aan de browserimport. Er is geen correctie met de simulatie toegepast. Het gekozen venster `13,5–70` videoseconden vermijdt het vasthouden en de eerste overgang, plus het laatste deel met kleine beweging en relatief veel meetruis; het overblijvende deel is nog steeds niet stationair. Het bevat 1.696 oorspronkelijke frames, waarvan 1.594 geselecteerde hoekparen. Na de snelheidsschatting over 11 punten blijven 1.011 volledige fasetoestanden in 44 ononderbroken segmenten over. Randpunten zonder volledig afleidingsvenster worden uitgesloten.
+
+De basis gebruikt `tau = 1` videoseconde, Theiler-venster `6` videoseconden, volghorizon `0,5` videoseconde, beginafstand `0,05–0,20`, maximaal 250 paren en een vooraf vastgelegd fitvenster `0,1–0,4` videoseconde volgtijd. De drempel van `0,05` is een te toetsen keuze, geen gemeten ruisvloer. De maximale toegestane stap tussen bronmetingen is `0,05` videoseconde; daarnaast worden de bronkwaliteit en onderbrekingen in de cadans gerespecteerd.
+
+| Analysevariant | Vaste paren | Helling per videoseconde | R² |
+| --- | ---: | ---: | ---: |
+| Basis: snelheidsvenster 11 punten | 249 | 0,3063 | 0,2713 |
+| Snelheidsvenster 7 punten | 250 | −0,4752 | 0,3500 |
+| Snelheidsvenster 15 punten | 190 | 0,4473 | 0,9659 |
+| Theiler-venster 10 videoseconden | 66 | 0,8211 | 0,4783 |
+| Maximale beginafstand 0,10 | 45 | 0,2059 | 0,0516 |
+
+De fit gebruikt tien lagpunten; door de afgeronde brontijdstempels zijn de feitelijke eerste en laatste tijden ongeveer `0,099999` en `0,399996` videoseconde. De kleine grenzentolerantie voorkomt dat een nominaal grenspunt door microsecondeafronding wegvalt. Gevraagde grenzen, gebruikte grenzen en tolerantie worden afzonderlijk gerapporteerd; de tolerantie overbrugt geen meetgaten.
+
+**Deze opname levert met deze controles geen robuuste positieve Lyapunov-exponent op.** Het teken en de grootte veranderen bij andere snelheidsvensters. De basisfit verklaart weinig van de variatie; het hogere `R²` bij 15 punten neemt die gevoeligheid niet weg. Er is geen onderbouwde reden om één variant uit te kiezen als de fysieke exponent of om op `2,4544` af te stemmen. Dit resultaat is evenmin bewijs dat de opstelling bij alle andere beginvoorwaarden niet-chaotisch zou zijn.
+
+In de basis is de mediane beginafstand ongeveer `0,1399` in de gekozen norm. Ongeveer 70,5% van de gebruikte ankerinstanties ligt vanaf 50 videoseconden: de nabije herhalingen komen dus vooral uit het latere deel met lagere amplitude. De 249 paren delen meetpunten en vormen geen 249 onafhankelijke herhalingen. Een korte horizon van een halve videoseconde, opgelegd door de onderbrekingen, hoeft geen werkelijk exponentieel groeigebied te bevatten.
+
+Het referentievenster `10,5–11,8` videoseconden geeft bij `tau = 1` een gecombineerde robuuste spreiding van ongeveer `0,0318` in de fasenorm. Dat is alleen een observatie van spreiding, waarin ook echte beweging kan zitten. Het is geen gekalibreerde onzekerheid, geen totale afstandsruisvloer en geen betrouwbaarheidsinterval voor de helling.
+
+De uitvoer `faseruimte-divergentie.json`, `.csv`, `.svg` en de afgebeelde PNG blijven in `.local-data/video-analyse`. Het JSON-bestand legt broncontrolesommen, scenario-instellingen, daadwerkelijk gebruikte paren en diagnostiek vast. De afbeelding is visueel gecontroleerd; lokale bestanden met metingen zijn geen onderdeel van de broncodepublicatie.
+
+### Softwarecontroles van de divergentie
+
+De volledige `node --test`-uitvoering na deze uitbreiding eindigde met **64 geslaagde tests en 0 fouten**: 23 fysicatests, 10 meetgegevenstests, 12 padtests en 19 divergentietests. De nieuwe tests controleren:
+
+- De periodieke hoekafstand en de afzonderlijke weging van snelheden met `tau`.
+- Lokale regressie, hoekontvouwing, omgerekende snelheden, ongeldige randen en het niet overbruggen van ontbrekende frames of expliciete segmentgrenzen.
+- De bekende helling van synthetische exponentiële afwijkingen, een vrije intercept, negatieve hellingen en het ontbreken van een betekenisvolle `R²` bij een constante curve.
+- Nulbeginafstand zonder kunstmatig epsilon, latere nulafstanden als gaten en afwijzing van een fit over gaten.
+- Een vaste, deterministische groep nabuurparen met volledige horizon; één ongedefinieerde paarafstand maakt de hele lag ongeldig.
+- Afstandsband, temporele uitsluiting, onbruikbare instellingen en begrenzing van rekenwerk.
+- Consequente tijdomrekening met meegeschaalde `tau`, plus afrondingsrobuuste fitgrenzen en het samenvoegen van een vrijwel dubbel eindpunt op de horizon.
+
+De synthetische signalen hebben bewust bekende eigenschappen om de berekening te toetsen. Deze tests tonen geen fysieke chaos en certificeren de methode niet voor iedere ruizige of niet-stationaire meting. De afgeleide videoreeks is afzonderlijk hierboven beoordeeld. De laatste lag valt nu precies op `0,5` videoseconde; er zijn 16 lagpunten, zonder een tweede punt enkele microseconden vóór de horizon.
+
+Gecontroleerde SHA-256-hashes van de nieuwe kern en tests:
+
+```text
+lyapunov.js
+A989F4F1275EA70AEE495BFAE82D5B774B20E828C3DE203FD5D734E33538980A
+tests/lyapunov.test.js
+861A12B64902C8143A0044786FC3A4BDE710C02CA6B2BD51F46B0EE595569F1D
+```
+
+### Browsercontrole divergentiepaneel (16 oktober 2026)
+
+De modulaire HTML is in de browser met de echte lokale `hoeken-videotijd.csv` gecontroleerd. De weergave gaf 249 vaste buurparen, 10 fitpunten, helling 0,306325592 per videoseconde en R² 0,271333635, overeenkomstig de lokale analyse. Ongeldige factor 0 verwijdert de grafiek en schakelt exports uit. Een fit tot 9 s bij een curve tot 0,5 s wordt geweigerd. De simulatievergelijking werkt; meting versus model weigert een onbekende fysieke tijdas. De JSON-export is daadwerkelijk gedownload en gecontroleerd op instellingen, fit en ontbreken van ruwe meetreeksen.
+
+Ook de opnieuw gebouwde zelfstandige HTML is via de lokale server in de browser gecontroleerd met dezelfde echte hoek-CSV: dezelfde 249 paren en fitwaarden, geen consolefouten. De standalone-grafiek en status zijn visueel geïnspecteerd en lokaal vastgelegd. Dubbelklikken via een file:-URL is niet geautomatiseerd geverifieerd.

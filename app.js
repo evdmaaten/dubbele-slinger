@@ -2,6 +2,8 @@ import { DEFAULTS, simulate, compareConvergence } from './physics.js';
 import { parseMeasurementCSV, compareMeasurements, exportSimulationCSV } from './measurements.js';
 import { initPathView, updatePathView, getPathComparisonSettings, restorePathComparisonSettings } from './path-view.js';
 
+import { initDivergenceView, updateDivergenceView, getDivergenceSettings, restoreDivergenceSettings, markDivergenceStale } from './lyapunov-view.js';
+
 const $ = id => document.getElementById(id);
 const DEG = 180 / Math.PI;
 const fmt = (n,d=2) => Number.isFinite(n) ? n.toLocaleString('nl-NL',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—';
@@ -37,6 +39,7 @@ function acceptResult(result){
   if(result.primary.status==='error')return failure(result.primary.diagnostics.errors.join(' '));
   primary=result.primary;twin=result.twin;
   updatePathView(primary);
+  updateDivergenceView(primary,twin);
   const {coarse, fine, ...compactConvergence}=result.convergence;convergence=compactConvergence;
   busy=false;dirty=parameterNames.some(key=>Number($(key).value)!==primary.params[key])||$('model').value!==primary.params.model;currentTime=0;setPlay(false);
   $('calculate').disabled=false;$('form-state').textContent=dirty?'Instellingen gewijzigd tijdens berekenen. Klik opnieuw op Bereken proef.':'Proef berekend. Druk op ▶ om af te spelen.';
@@ -155,7 +158,7 @@ function download(name,content,type){const blob=new Blob([content],{type}),url=U
 function exportReady(){if(!primary||busy){$('export-status').textContent='Bereken eerst een proef.';return false;}if(dirty){$('export-status').textContent='Instellingen zijn gewijzigd. Bereken de proef opnieuw voordat je exporteert.';return false;}return true;}
 
 $('settings-form').addEventListener('submit',e=>{e.preventDefault();calculate();});
-$('settings-form').addEventListener('input',()=>{dirty=true;setPlay(false);$('form-state').textContent='Instellingen gewijzigd. De grafieken tonen nog de vorige proef; klik op Bereken proef.';});
+$('settings-form').addEventListener('input',()=>{markDivergenceStale();dirty=true;setPlay(false);$('form-state').textContent='Instellingen gewijzigd. De grafieken tonen nog de vorige proef; klik op Bereken proef.';});
 $('model').addEventListener('change',()=>{updateModelFields();dirty=true;setPlay(false);$('form-state').textContent='Verbinding gewijzigd. Controleer de massa’s en klik op Bereken proef.';});
 $('preset').addEventListener('change',()=>{setParams({...DEFAULTS,...presets[$('preset').value]});calculate();});
 $('play').addEventListener('click',()=>{if(!primary||busy)return;if(currentTime>=primary.samples.at(-1).t)currentTime=0;if(primary.samples.at(-1).t===0)return;setPlay(!playing);drawAll();});
@@ -167,7 +170,7 @@ $('measurement-file').addEventListener('change',async e=>{const file=e.target.fi
 $('clear-measurements').addEventListener('click',()=>{measurements=[];$('measurement-file-label').textContent='Selecteer een lokaal bestand';updateComparison();});
 $('csv-example').addEventListener('click',()=>download('voorbeeld-geen-echte-meting.csv','# Kunstmatige voorbeeldwaarden, GEEN echte metingen. Vervang met eigen videometingen.\nt,theta1_deg,theta2_deg\n0,25,-15\n0.1,22,-9\n0.2,16,3\n','text/csv;charset=utf-8'));
 $('export-csv').addEventListener('click',()=>{if(exportReady()){download('dubbele-slinger-simulatie.csv',exportSimulationCSV(primary),'text/csv;charset=utf-8');$('export-status').textContent='Simulatie geëxporteerd; bewaar ook de JSON voor instellingen en modelgrens.';}});
-$('export-json').addEventListener('click',()=>{if(exportReady()){download('dubbele-slinger-proef.json',JSON.stringify({schema:'dubbele-slinger/v2',physicalValidation:'Niet uitgevoerd; toewijzing van de aangeleverde practicum-massa’s nog onbekend.',createdAt:new Date().toISOString(),model:primary.params.model==='rigid'?'twee uniforme slanke stangen met eigen massa en optionele puntmassa’s':'twee massaloze onrekbare touwen, puntmassa’s, stopt bij slapte',angleConvention:'absolute hoeken vanaf omlaag; positief rechts',units:{parametersAngles:'deg',parametersOmega:'deg/s',length:'m',mass:'kg',time:'s',damping:'N m s/rad',x:'rechts',y:'omhoog'},params:primary.params,status:primary.status,event:primary.event,diagnostics:primary.diagnostics,convergence,twin:{params:twin.params,status:twin.status,event:twin.event},pathComparison:getPathComparisonSettings(),measurementComparison:comparison?{count:comparison.count,rmse1Deg:comparison.rmse1Deg,rmse2Deg:comparison.rmse2Deg,excluded:comparison.excluded,timeOffset:Number($('time-offset').value),maxTime:Number($('compare-until').value)}:null},null,2),'application/json');$('export-status').textContent='Instellingen, modelgrens en numerieke controles bewaard.';}});
+$('export-json').addEventListener('click',()=>{if(exportReady()){download('dubbele-slinger-proef.json',JSON.stringify({schema:'dubbele-slinger/v2',physicalValidation:'Niet uitgevoerd; toewijzing van de aangeleverde practicum-massa’s nog onbekend.',createdAt:new Date().toISOString(),model:primary.params.model==='rigid'?'twee uniforme slanke stangen met eigen massa en optionele puntmassa’s':'twee massaloze onrekbare touwen, puntmassa’s, stopt bij slapte',angleConvention:'absolute hoeken vanaf omlaag; positief rechts',units:{parametersAngles:'deg',parametersOmega:'deg/s',length:'m',mass:'kg',time:'s',damping:'N m s/rad',x:'rechts',y:'omhoog'},params:primary.params,status:primary.status,event:primary.event,diagnostics:primary.diagnostics,convergence,twin:{params:twin.params,status:twin.status,event:twin.event},pathComparison:getPathComparisonSettings(),divergenceAnalysis:getDivergenceSettings(),measurementComparison:comparison?{count:comparison.count,rmse1Deg:comparison.rmse1Deg,rmse2Deg:comparison.rmse2Deg,excluded:comparison.excluded,timeOffset:Number($('time-offset').value),maxTime:Number($('compare-until').value)}:null},null,2),'application/json');$('export-status').textContent='Instellingen, modelgrens en numerieke controles bewaard.';}});
 $('import-json').addEventListener('change',async e=>{
   const file=e.target.files[0];if(!file)return;
   try{
@@ -183,7 +186,7 @@ $('import-json').addEventListener('change',async e=>{
       if(input.tagName==='SELECT'&&![...input.options].some(o=>Number(o.value)===p[key]))throw new Error('Niet-ondersteunde tijdstap.');
       if((input.min!==''&&p[key]<minimum)||(input.max!==''&&p[key]>Number(input.max)))throw new Error('Instelling buiten bereik: '+key);
     }
-    setParams(p);restorePathComparisonSettings(data.pathComparison);await calculate();$('export-status').textContent='Instellingen ingelezen; proef wordt opnieuw berekend.';
+    setParams(p);restorePathComparisonSettings(data.pathComparison);restoreDivergenceSettings(data.divergenceAnalysis);await calculate();$('export-status').textContent='Instellingen ingelezen; proef wordt opnieuw berekend.';
   }catch(error){$('export-status').textContent=error.message;}
   e.target.value='';
 });
@@ -195,5 +198,6 @@ function frame(timestamp){
   requestAnimationFrame(frame);
 }
 initPathView();
+initDivergenceView();
 window.addEventListener('resize',()=>updatePathView(primary));
 setParams({...DEFAULTS,...presets.rods});requestAnimationFrame(frame);calculate();
