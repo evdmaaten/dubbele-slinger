@@ -1,0 +1,59 @@
+VIDEOANALYSE DUBBELE SLINGER
+
+Deze scripts zijn afgestemd op de bekeken practicumvideo van 1024x576 pixels,
+met oranje en groene stippen. Het is geen algemene automatische tracker.
+Referentiepunten, kleuren en ruime afstandsgrenzen zijn in track_video.py
+vastgelegd op basis van de beelden, niet op basis van de simulatie.
+
+Installatie in een aparte Python-omgeving:
+  python -m venv .venv-video
+  .venv-video\Scripts\python.exe -m pip install -r analysis\requirements.txt
+
+FFmpeg en FFprobe moeten op PATH staan. Daarna vanuit de projectmap:
+  .venv-video\Scripts\python.exe analysis\track_video.py "pad\naar\video.mp4" .local-data\video-analyse
+  .venv-video\Scripts\python.exe analysis\report_video.py .local-data\video-analyse
+  .venv-video\Scripts\python.exe analysis\render_trails.py "pad\naar\video.mp4" .local-data\video-analyse
+
+UITVOER
+videoanalyse.html: zelfstandig leesbaar rapport met ingebedde afbeeldingen.
+gemeten-beweging.png: wetenschappelijke grafiek op de videotijdas.
+hoeken-videotijd.csv: primaire meetreeks, compatibel met simulatorimport.
+hoeken-SCENARIO-8x.csv: dezelfde meetpunten, tijd gedeeld door8. ONBEVESTIGD.
+tracking-raw.csv: alle beelden inclusief mislukte detecties en ruwe posities.
+tracking-quality.csv: selectie voor hoekparen, afkeurreden en beschikbaarheid
+  van de strenge kleurcontrole. Een ontbrekende strenge controle is geen
+  bevestiging van betrouwbaarheid. Gebruik raw voor afzonderlijke hoeken.
+tracking-metadata.json: bronhash, tijdstempels en trackerconventies.
+measurement-summary.json: selectie, beginhoeken, tijdscenario en beperkingen.
+track-frame-*.jpg: steekproefbeelden met markerherkenning ter controle.
+practicum-met-bewegingssporen.mp4: oorspronkelijke afspeelsnelheid en geluid,
+  met sporen van de laatste8videoseconden; aanpasbaar via --trail-seconds.
+volledige-bewegingspaden.png: volledige gemeten paden relatief aan draaipunt.
+bewegingspaden.csv: pad-CSV voor De meting naast het model in de HTML.
+  Alle bronframes blijven aanwezig; valid=0 betekent een onderbreking.
+trail-render-metadata.json: broncontrolesommen en renderconventies.
+
+INTERPRETATIE
+De hoeken zijn absoluut vanaf de neerwaartse as in het beeld, positief rechts.
+Beeldverticaal is nog niet gekalibreerd aan zwaartekracht. Geen perspectief-
+correctie. De basisstand komt uit10,5-11,8s vlak voor de zichtbare beweging.
+De spreiding in dat venster is geen totale hoeknauwkeurigheid.
+
+30fps is de afspeelsnelheid.240fps is genoemd als opnamesnelheid, maar de
+gebruiker kent de vertraging niet. Echte tijd blijft daarom onbekend.
+Alleen bij behoud van alle opnamebeelden een-op-een geldt tijd /8.
+Bij deze omzetting zouden hoeksnelheden juist met8 vermenigvuldigd worden.
+
+Automatische kwaliteitsselectie en visuele steekproeven vervangen geen
+volledige handmatige controle. Gaten zijn weggelaten, niet ingevuld. De
+simulator interpoleert bij vergelijking; kies daarom geen interpretatie
+op detailniveau van onbetrouwbare of ontbrekende beelden.
+
+De video toont geen eenduidig gezamenlijk mechanisch loslaatmoment. Kies voor
+latere validatie een gezamenlijk tijdstip met beide hoeken en hoeksnelheden.
+De betekenis van de gemelde massa's, zwaartepunten, demping, hoekreferentie
+en echte tijdschaal moeten eerst worden vastgesteld.
+
+Deze analyse uploadt niets. Bronvideo en gegenereerde meetgegevens blijven
+lokaal onder .local-data (uitgesloten van Git). Het ZIP-resultaat bevat geen
+bronvideo, wel enkele geannoteerde stills voor controle.

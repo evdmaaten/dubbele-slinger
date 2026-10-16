@@ -4,3 +4,6 @@
 
 /* Model selection and distributed rod masses. */
 .model-label{margin-top:18px}.rod-fields{margin-top:12px}.rod-fields[hidden]{display:none}.example-note{font-size:11px;line-height:1.6;color:#70583f;background:#f4ecdf;padding:9px 11px;border-radius:6px;margin:12px 0 0}
+
+/* Measured XY paths beside simulated marker positions. */
+.path-section{padding:30px 32px;margin-top:24px;scroll-margin-top:20px}.path-section>p{max-width:950px;color:var(--muted);font-size:13px}.path-section h2{font-size:28px}.path-setup{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:22px}.path-setup>.field-grid{align-content:start}.path-calibration{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:18px}.path-overlay-label{display:block;margin-top:14px;font-size:12px}.path-overlay-label input{accent-color:var(--cyan)}.path-charts{margin-top:20px;gap:24px}.path-charts .chart-card{padding:0}.path-charts canvas{height:350px}.path-section #path-status{max-width:none;font-size:12px}.path-section .hint{font-size:11px}@media(max-width:760px){.path-section{padding:24px}.path-setup{grid-template-columns:1fr;gap:22px}.path-calibration{grid-template-columns:1fr 1fr}.path-charts canvas{height:310px}}

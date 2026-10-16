@@ -151,6 +151,29 @@ De simulatie-CSV bevat tijd, hoeken, hoeksnelheden, posities, energie, beide kra
 
 In touwmodus heten de krachtkolommen `tension1_N` en `tension2_N`. In stangmodus zijn dit `axial_reaction1_N` en `axial_reaction2_N`, aangevuld met `reaction1_x_N`, `reaction1_y_N`, `reaction2_x_N` en `reaction2_y_N` voor de volledige scharnierreacties. Ook voor de krachten is `x` naar rechts en `y` omhoog. De geometrie, stangmassa's en modelkeuze staan in JSON; bewaar dat bestand bij de CSV.
 
+## Bewegingspaden uit video naast de simulatie
+
+In **De meting naast het model** laad je een aparte pad-CSV:
+
+```csv
+t_video_s,frame,valid,x1_px,y1_px,x2_px,y2_px
+0,0,1,95,210,-55,258
+0.033333,1,0,,,,
+0.066667,2,1,94,211,-56,259
+```
+
+Dit zijn beeldposities ten opzichte van het gevolgde bovenste draaipunt: x naar rechts, y naar beneden. De interface draait alleen de y-as om voor de grafiek. `valid=0` bewaart een afgekeurd beeld als onderbreking; lijnen worden ook onderbroken bij ontbrekende framenummers. De meetbaan wordt niet uit modelhoeken of aangenomen stanglengtes gereconstrueerd.
+
+Links staat de meting in pixels, rechts het berekende pad in meters, met onafhankelijke asschalen. Na invullen van een bekende cameraschaal in px/m kunnen beide grafieken dezelfde meterschaal gebruiken en kun je de meting gestippeld over de modelbaan leggen. Een optionele positieve hoekcorrectie draait de meetcoördinaten tegen de klok in (x rechts, y omhoog). Dit is een rotatie en uniforme schaal, geen perspectiefcorrectie.
+
+De modeltijd is `(videotijd - gekozen starttijd) / factor`. Factor 1 neemt normale snelheid aan. Voor de aangeleverde opname is 240 fps genoemd en het ontvangen bestand speelt op 30 fps, maar de vertraging is niet bevestigd. Factor 8 is daarom uitsluitend een scenario, geldig als alle opnameframes een-op-een behouden zijn. Gebruik geen passende factor als bewijs van fysieke overeenstemming.
+
+De markerfracties bepalen waar het te vergelijken modelpunt op iedere stang ligt, gemeten vanaf het bovenste scharnier van die stang: 0 = begin, 1 = einde. Punt 2 telt de volledige lengte van stang 1 mee. De groene stip in de video ligt vóór het fysieke einde; meet haar fractie. Deze instelling wijzigt alleen het getekende modelpunt, niet de massa of de bewegingsvergelijkingen. De twee gevolgde stippen zijn nog geen geïdentificeerde massamiddelpunten.
+
+Het gekozen tijdvenster wordt beperkt tot de overlap van meting en geldige simulatie. De grafieken tonen een ruimtelijk pad over dat hele venster; zij volgen niet de afspeelcursor. Er wordt geen ruimtelijke foutscore of automatische kalibratie berekend. De vergelijkingsinstellingen komen mee in de proef-JSON; het meetbestand moet opnieuw lokaal worden geladen.
+
+Het lokale script `analysis/render_trails.py` maakt, na `track_video.py` en `report_video.py`, een MP4 met de recente sporen, een volledige padgrafiek en `bewegingspaden.csv`. Historische markerposities worden alleen voor de gemeten verschuiving van het bovenste draaipunt gecorrigeerd. Bronvideo en meetgegevens staan onder `.local-data/` en worden niet automatisch gepubliceerd.
+
 ## Rekenmodel
 
 Het systeem is tweedimensionaal met een vast ophangpunt. Voor touw zijn de verbindingen massaloos en onrekbaar. Voor stangen is de massaverdeling uniform, met het massamiddelpunt op halve lengte en traagheidsmoment `r s²/12` om het eigen massamiddelpunt. De optionele puntmassa's zitten op het tussenpunt en het onderste eindpunt. Zie ook [Neumann, *Double Pendulum as Rigid Bodies* (2011)](https://www.myphysicslab.com/develop/docs/Rigid_Double_Pendulum.pdf) voor de afleiding met uitgebreide lichamen. Hieronder zijn hoeken in radialen, `w1 = d(theta1)/dt`, `w2 = d(theta2)/dt` en `q = theta1 - theta2`.
@@ -195,6 +218,6 @@ Niet meegenomen: touwrek en touwmassa; buiging of knikken van stangen; afwijkend
 
 ## Bestanden en delen
 
-De broncode wordt beheerd in de privérepository [evdmaaten/dubbele-slinger](https://github.com/evdmaaten/dubbele-slinger). De map bevat de bewerkbare broncode, tests, dit meetprotocol en het gegenereerde `standalone.html`. Download de repository via **Code → Download ZIP**, pak die uit en open het losse HTML-bestand. Het model kan ook op een andere computer lokaal worden geopend; webhosting is niet nodig.
+De broncode wordt beheerd in de repository [evdmaaten/dubbele-slinger](https://github.com/evdmaaten/dubbele-slinger). De map bevat de bewerkbare broncode, tests, dit meetprotocol en het gegenereerde `standalone.html`. Download de repository via **Code → Download ZIP**, pak die uit en open het losse HTML-bestand. Het model kan ook op een andere computer lokaal worden geopend; webhosting is niet nodig.
 
 De app verwerkt geïmporteerde meetgegevens in de browser; ze worden niet automatisch geüpload. Bewaar echte proefgegevens bewust samen met video, ruwe metingen, geëxporteerde simulatie en proefinstellingen. De JSON-import herstelt de modelinstellingen, niet de oorspronkelijke meet-CSV: laad die apart opnieuw in. Proefbestanden gebruiken schema `dubbele-slinger/v2`; eerdere `v1`-bestanden worden als touwproef ingelezen.

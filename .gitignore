@@ -1,3 +1,7 @@
 node_modules/
 .qa/
 *.log
+.venv-video/
+.local-data/
+__pycache__/
+*.pyc

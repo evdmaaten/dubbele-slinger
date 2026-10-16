@@ -172,3 +172,15 @@ Volg het [meetprotocol in README.md](README.md). Een vergelijking met een opnieu
 De keuze **Practicum · alleen lengtes** is in Chrome met het opnieuw gebouwde `standalone.html` gecontroleerd. De interface toont `s1=0.203` en `s2=0.157`; de stangmassa’s blijven expliciete voorbeeldwaarden van elk `0.2 kg`, met nul extra puntgewichten. De tabelmassa’s `0.2703` en `0.2000 kg` zijn niet toegewezen: de gebruiker heeft bevestigd dat hun betekenis nog onbekend is. Het meetrecord bewaart daarvoor `modelParameter: null`.
 
 De voorbeeldberekening van 20 s wordt afgerond zonder browserfouten; de vergelijking met halve tijdstap toont ongeveer `9.8e-12 m`. De toelichting over nog onbekende massatoewijzing is zichtbaar naast de instellingen. Dit controleert de gegevensinvoer en interface; de rekenkern is niet gewijzigd en er is geen nieuwe fysieke validatie uitgevoerd.
+
+## Aanvulling: gemeten bewegingspaden (16 oktober 2026)
+
+De volledige suite slaagt: 45 tests, inclusief 12 nieuwe tests voor pad-CSV, expliciete pixel/meterschaal, y-asrichting, rotatie, tijdfactor, temporele overlap, markerfracties, ontbrekende frames en afronding bij het modeleindpunt. De bewegingsvergelijkingen zijn ongewijzigd.
+
+De echte pad-CSV heeft 2.492 oorspronkelijke videoframes, waarvan 2.365 geselecteerde positieparen. Afgekeurde beelden blijven expliciet aanwezig met `valid=0`. Meetposities komen direct uit de gevolgde stippen ten opzichte van het bovenste draaipunt, niet uit de simulatie of aangenomen lengtes. De kleurcontrole is niet voor alle geselecteerde punten beschikbaar; de bronanalyse beschrijft de resterende onzekerheden.
+
+Het opnieuw gebouwde `standalone.html` is in Chrome via de lokale HTTP-preview getest met deze CSV. Een expliciet testscenario met tijdfactor 8, startreferentie 11,8 videoseconde en venster 0–5 modelseconde toont 1.126 geldige en 75 afgekeurde meetpunten; 1.291 frames vallen buiten het venster. Links staan pixels en rechts meters met eigen asbereiken. Een testwaarde 1.145 px/m schakelde een gedeelde meterschaal en gestreepte overlay in; na wissen van de schaal werd de overlay uitgeschakeld. Tijdsfactor 0 geeft een invoerfout en lege padgrafieken. Er waren geen consolefouten.
+
+De testwaarden voor tijd en schaal zijn geen geverifieerde kalibratie. Het screenshot `.qa/padvergelijking-browser.png` toont het scenario met afzonderlijke pixels/metersassen. JSON-export bewaart de vergelijkingsinstellingen en bestandsnaam, zonder de meetpunten mee te sturen. De code herstelt alleen de instellingen; de CSV moet opnieuw worden geladen.
+
+De lokaal gemaakte spoorvideo behoudt alle 2.492 beelden, 30 fps, een duur van 83,067 s en de oorspronkelijke AAC-audiostream. De uitvoer is 1.024 × 700 pixels inclusief kop- en voetbalk. De hele MP4 is foutloos gedecodeerd; markercentra in drie bewegingsfasen komen overeen met de broncoördinaten. Lijnen worden niet over afgekeurde frames getrokken. Historische spoorpunten worden alleen voor translatie van het draaipunt gecorrigeerd. De opname bepaalt geen massamiddelpunten, fysieke tijdschaal of volledige camerakalibratie.
