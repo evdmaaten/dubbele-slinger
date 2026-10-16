@@ -160,7 +160,7 @@ De zelfstandige HTML bevat geen externe HTML/CSS-resources. De ingebedde modules
 
 De lokaal bekeken video toont twee stijve vlakke strips, met gele markeringen bij het tussenpunt en het onderste eindpunt. De bovenste strip lijkt langer; de beweging dempt zichtbaar uit in de opname van ongeveer 83 s. De stangmodus sluit aan op dit zichtbare mechanisme, met uniforme slanke stangen als benadering. Er is geen betrouwbare schaal- of massakalibratie uit de beelden afgeleid. De video blijft lokaal en is niet aan de repository toegevoegd.
 
-Meet eerst de draaipuntsafstanden, massa en massaverdeling van elke strip, eventuele extra massa van gele markeringen en bevestigingen, beide beginhoeken en het loslaatmoment met hun onzekerheden. Film de kleine uitslagen en vergelijk de vroege hoekcurven, periodes en fase. Bepaal vervolgens eventueel demping uit aparte proeven en controleer met een nieuwe proef of die kalibratie voorspelt wat er gebeurt.
+De draaipuntsafstanden en totale stangmassa's zijn inmiddels aangeleverd; op 16 oktober 2026 is bevestigd dat de gele vierkantjes volgmarkers zijn en geen aparte gewichten. Bepaal nog de massaverdeling van elke strip, de ligging van de markercentra ten opzichte van scharnieren en uiteinden, beide fysieke beginhoeken en het loslaatmoment met hun onzekerheden. De eigen markermassa is niet afzonderlijk gewogen. Film de kleine uitslagen en vergelijk de vroege hoekcurven, periodes en fase. Bepaal vervolgens eventueel demping uit aparte proeven en controleer met een nieuwe proef of die kalibratie voorspelt wat er gebeurt.
 
 Bij grote uitslagen moeten vooral vlakke beweging, scharnierwrijving, botsingen, werkelijke massaverdeling en rotatie van extra gewichten worden gecontroleerd. Voor een aparte touwopstelling is blijvende touwspanning vereist: als een touw slap wordt, eindigt die modelvariant en wordt de vervolgbeweging niet voorspeld. Er is geen universele RMSE-grens gekozen die een echte proef automatisch goedkeurt.
 
@@ -169,9 +169,17 @@ Volg het [meetprotocol in README.md](README.md). Een vergelijking met een opnieu
 
 ## Aanvulling: aangeleverde practicumlengtes (15 oktober 2026)
 
-De keuze **Practicum · alleen lengtes** is in Chrome met het opnieuw gebouwde `standalone.html` gecontroleerd. De interface toont `s1=0.203` en `s2=0.157`; de stangmassa’s blijven expliciete voorbeeldwaarden van elk `0.2 kg`, met nul extra puntgewichten. De tabelmassa’s `0.2703` en `0.2000 kg` zijn niet toegewezen: de gebruiker heeft bevestigd dat hun betekenis nog onbekend is. Het meetrecord bewaart daarvoor `modelParameter: null`.
+Deze historische controle beschrijft de versie van 15 oktober, vóór de massabevestiging van 16 oktober. De toenmalige keuze **Practicum · alleen lengtes** is in Chrome met het opnieuw gebouwde `standalone.html` gecontroleerd. De interface toonde `s1=0.203` en `s2=0.157`; de stangmassa’s waren voorbeeldwaarden van elk `0.2 kg`, met nul extra puntgewichten. De tabelmassa’s `0.2703` en `0.2000 kg` waren toen nog niet toegewezen en het meetrecord bewaarde `modelParameter: null`. Die toewijzing is inmiddels bevestigd en bijgewerkt, zoals in de volgende aanvulling staat.
 
-De voorbeeldberekening van 20 s wordt afgerond zonder browserfouten; de vergelijking met halve tijdstap toont ongeveer `9.8e-12 m`. De toelichting over nog onbekende massatoewijzing is zichtbaar naast de instellingen. Dit controleert de gegevensinvoer en interface; de rekenkern is niet gewijzigd en er is geen nieuwe fysieke validatie uitgevoerd.
+De toenmalige voorbeeldberekening van 20 s werd afgerond zonder browserfouten; de vergelijking met halve tijdstap toonde ongeveer `9.8e-12 m`. Dit controleerde de gegevensinvoer en interface van die versie, met de destijds nog onbekende massatoewijzing. De rekenkern was niet gewijzigd en er was geen nieuwe fysieke validatie uitgevoerd.
+
+## Aanvulling: bevestigde stangmassa's (16 oktober 2026)
+
+De gebruiker bevestigt dat `0,2703 ± 0,001 kg` en `0,2000 ± 0,001 kg` bij respectievelijk de bovenste en onderste staaf horen. De gele vierkantjes zijn volgmarkers, geen aparte puntgewichten. De voorinstelling **Practicum · lengtes en stangmassa's** gebruikt daarom `rodMass1=0.2703`, `rodMass2=0.2000`, `m1=m2=0`, `s1=0.203` en `s2=0.157`. Het meetrecord legt deze toewijzing vast. De gemelde massamarges zijn meetcontext; het model rekent met nominale waarden en voert geen onzekerheidspropagatie uit.
+
+De uniforme massaverdeling, het zwaartepunt halverwege en het traagheidsmoment van een slanke staaf blijven aannames. Beginhoeken, beginsnelheden en demping in de voorinstelling zijn voorbeeldwaarden; de fysieke tijdschaal is niet bevestigd. De plaats van een marker wordt niet op grond van de massabevestiging gelijkgesteld aan het scharnier of uiteinde. De groene stip is vóór het fysieke uiteinde waargenomen; markerfracties moeten nog worden gemeten. Deze parametercorrectie verandert de rekenkern niet en vormt geen nieuwe experimentele validatie. Het algemene startvoorbeeld blijft twee stangen van `0,5 m` en `0,2 kg`.
+
+Na deze correctie zijn de instellingen rechtstreeks uit de voorinstelling gecontroleerd tegen het meetrecord. De run met de voorbeeldbeginstand en -demping voltooide 20 s met 2.001 uitvoerpunten. De maximale fout in `E+D` was `3,19 × 10⁻¹² J`; de maximale positieafwijking bij halve tijdstap was `1,05 × 10⁻¹¹ m`. `node --check app.js`, het opnieuw bouwen van `standalone.html` en alle **64 tests** slaagden. Dit zijn software- en numerieke controles; er is hiermee geen nieuwe browsercontrole of fysieke kalibratie geclaimd.
 
 ## Aanvulling: gemeten bewegingspaden (16 oktober 2026)
 
@@ -253,3 +261,7 @@ tests/lyapunov.test.js
 De modulaire HTML is in de browser met de echte lokale `hoeken-videotijd.csv` gecontroleerd. De weergave gaf 249 vaste buurparen, 10 fitpunten, helling 0,306325592 per videoseconde en R² 0,271333635, overeenkomstig de lokale analyse. Ongeldige factor 0 verwijdert de grafiek en schakelt exports uit. Een fit tot 9 s bij een curve tot 0,5 s wordt geweigerd. De simulatievergelijking werkt; meting versus model weigert een onbekende fysieke tijdas. De JSON-export is daadwerkelijk gedownload en gecontroleerd op instellingen, fit en ontbreken van ruwe meetreeksen.
 
 Ook de opnieuw gebouwde zelfstandige HTML is via de lokale server in de browser gecontroleerd met dezelfde echte hoek-CSV: dezelfde 249 paren en fitwaarden, geen consolefouten. De standalone-grafiek en status zijn visueel geïnspecteerd en lokaal vastgelegd. Dubbelklikken via een file:-URL is niet geautomatiseerd geverifieerd.
+
+### Browsercontrole bevestigde massa's
+
+De opnieuw gebouwde standalone is op 16 oktober 2026 via localhost in de browser geopend. Selectie van het practicumvoorbeeld toonde s1=0.203, s2=0.157, rodMass1=0.2703, rodMass2=0.2 en beide extra puntmassa's 0. De 20-secondenproef voltooide; geen browserconsolefouten. De waarden en massatoelichting zijn visueel gecontroleerd. De volledige softwaretestset slaagde opnieuw: 64 tests, 0 fouten. Dit bevestigt de instelling en werking van de software, geen fysieke validatie.

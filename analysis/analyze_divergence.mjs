@@ -162,7 +162,8 @@ const report = {
   limitations: [
     'Only one decaying, nonstationary recording is available; repeated phase-space visits are not repeated experiments.',
     'A positive finite-window slope can result from tracking noise, differentiation, phase mismatch, dissipation, or a transient; it is not proof of chaos.',
-    'Marker centres, physical hinge axes, camera roll, perspective, masses and real time scale are not independently calibrated.',
+    'Rod masses are user-confirmed as upper 0.2703 kg and lower 0.2000 kg (each reported +/-0.001 kg), with no separate point weights at the yellow tracking markers. Uniform density, centres of mass, moments of inertia and damping remain uncalibrated model assumptions.',
+    'Marker centres, physical hinge axes, camera roll, perspective and real time scale are not independently calibrated.',
     'The short horizon is imposed by frequent rejected tracking frames. It may not contain a genuine exponential-growth regime.',
     'Nearest-neighbor selection is concentrated in the later, lower-amplitude part of this decaying recording; early states may have no sufficiently close returns.',
     'Smoothing-window, exclusion-window and initial-distance sensitivity must be considered together.',

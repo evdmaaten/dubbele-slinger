@@ -51,8 +51,12 @@ op detailniveau van onbetrouwbare of ontbrekende beelden.
 
 De video toont geen eenduidig gezamenlijk mechanisch loslaatmoment. Kies voor
 latere validatie een gezamenlijk tijdstip met beide hoeken en hoeksnelheden.
-De betekenis van de gemelde massa's, zwaartepunten, demping, hoekreferentie
-en echte tijdschaal moeten eerst worden vastgesteld.
+De gebruiker heeft op 16 oktober 2026 bevestigd dat 0,2703 kg en 0,2000 kg
+(beide gemeld ±0,001 kg) de massa's van de bovenste en onderste staaf zijn.
+De gele vierkantjes zijn volgmarkers, geen aparte puntgewichten: gebruik
+rodMass1=0.2703, rodMass2=0.2000 en m1=m2=0 in het stangenmodel.
+Uniformiteit, zwaartepunten, traagheidsmomenten, demping, markergeometrie,
+hoekreferentie en echte tijdschaal zijn hiermee nog niet gekalibreerd.
 
 Deze analyse uploadt niets. Bronvideo en gegenereerde meetgegevens blijven
 lokaal onder .local-data (uitgesloten van Git). Het ZIP-resultaat bevat geen
